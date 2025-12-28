@@ -1,0 +1,149 @@
+# 📘 Coding & Naming Standards
+
+This document defines the **coding, naming, and layering standards** used in this project. These rules are mandatory and are designed to keep the codebase **portable, readable, and scalable** for long-term embedded development.
+
+---
+
+## 1. Architecture Rules
+
+The project follows a strict layered architecture:
+
+HAL → Device-Specific Drivers → Generic Device Drivers → GUI Framework → Application
+
+
+### Rules
+- ESP-IDF APIs are allowed **ONLY** in the **HAL** layer
+- Higher layers must be **MCU-agnostic**
+- No layer may bypass the layer directly below it
+- `main.c` must remain minimal and act only as an entry point
+
+---
+
+## 2. File Naming Convention
+
+### Rules
+- Lowercase only
+- Snake case
+- Descriptive names
+- Always include module prefix
+
+### Format
+
+<module><purpose>.c
+<module><purpose>.h
+
+
+### Examples
+
+platform_gpio.c
+platform_spi.h
+st7789_display.c
+display_driver.c
+gui_event_handler.c
+app_controller.c
+
+
+---
+
+## 3. Function Naming Convention
+
+### Format
+
+<module><action><object>()
+
+
+### Rules
+- Lowercase snake case
+- Verb-based naming
+- Avoid generic names such as `init()`, `start()`, `handle()`
+
+### Examples
+```c
+platform_gpio_init();
+platform_spi_transfer();
+
+display_init();
+display_flush();
+
+gui_draw_button();
+app_process_event();
+
+4. Variable Naming
+Local Variables
+
+uint8_t retry_count;
+bool is_initialized;
+
+Static (File-Scope) Variables
+
+static bool display_ready;
+static uint32_t tick_count;
+
+Global Variables (Avoid Wherever Possible)
+
+g_system_state;
+g_display_context;
+
+    All global variables must be prefixed with g_.
+
+5. Structs, Enums, and Typedefs
+Structs
+
+typedef struct {
+    uint16_t width;
+    uint16_t height;
+} display_config_t;
+
+Enums
+
+typedef enum {
+    DISPLAY_STATE_OFF = 0,
+    DISPLAY_STATE_ON,
+    DISPLAY_STATE_SLEEP
+} display_state_t;
+
+Rules
+
+    Types use snake_case_t
+
+    Enum values use UPPER_SNAKE_CASE
+
+6. Macros and Constants
+Format
+
+#define DISPLAY_MAX_WIDTH 240
+#define SPI_TIMEOUT_MS   100
+
+Rules
+
+    Uppercase snake case only
+
+    Avoid magic numbers in code
+
+7. Public vs Private APIs
+Public APIs (Header Files)
+
+display_init();
+display_flush();
+
+Private APIs (Source Files Only)
+
+static void display_reset_sequence(void);
+static uint16_t calculate_stride(void);
+
+8. Callbacks and ISRs
+Callback Functions
+
+button_pressed_cb();
+display_flush_done_cb();
+
+Interrupt Service Routines
+
+gpio_button_isr();
+timer_tick_isr();
+
+Rules
+
+    ISR functions must end with _isr
+
+    ISR logic must be minimal and non-blocking
