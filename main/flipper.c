@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-#include "esp_hal_spi.h"
+#include "spi_hal.h"
 
 extern void hal_spi_test(void);
 
