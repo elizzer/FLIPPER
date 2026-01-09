@@ -3,10 +3,11 @@
 #include "spi_hal.h"
 
 extern void hal_spi_test(void);
+extern void ili9341_lcd_disp_test(void);
+
 
 void app_main(void)
 {
     printf("Starting SPI HAL test...\n");
-
-    hal_spi_test();
+    ili9341_lcd_disp_test();
 }

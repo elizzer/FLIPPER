@@ -1,0 +1,54 @@
+#ifndef ILI9341_HW_H
+#define ILI9341_HW_H
+
+
+#define ILI9341_CMD         (0)
+#define ILI9341_DATA        (1)
+
+// GPIO Levels
+#define GPIO_HIGH       1
+#define GPIO_LOW        0
+
+
+// Display Parameters
+#define ILI9341_WIDTH       240
+#define ILI9341_HEIGHT      320
+
+#define NOP 0x00
+#define SOFT_RESET 0X01
+#define READ_DISP_ID_INFO 0x04
+#define READ_DISP_STAT 0x09
+#define READ_DISP_POWER_MODE 0x0A
+#define READ_DISP_MADCTL 0x0B
+#define READ_PXL_FORMAT 0x0C
+#define READ_PXL_IMG_FORMAT 0x0D
+#define READ_DISP_SIGNAL_MODE 0x0E
+#define READ_DISP_SELF_DIAG_RES 0x0F
+#define ENTER_SLEEP_MODE 0x10
+#define SLEEP_OUT 0x11
+#define PARTIAL_MODE_ON 0x12
+#define NORM_DISP_MODE_ON 0x13
+#define DISP_INVERSION_ON 0x20
+#define DISP_INVERSION_OFF 0x21
+#define GAMMA_SET 0x26
+#define DISPLAY_OFF 0x28
+#define DISPLAY_ON 0x29
+#define COL_ADDR_SET 0x2A
+#define PAGE_ADDR_SET 0x2B
+#define MEM_WRITE 0x2C
+#define COLOR_SET 0x2D
+#define MEM_READ 0x2E
+#define PARTIAL_AREA 0x30
+#define VER_SCROLL_DEF 0x33
+#define TEARING_EFFECT_LINE_OFF 0x34
+#define TEARING_EFFECT_LINE_ON 0x35
+#define MEM_ACCESS_CTL 0x36
+#define VER_SCROLL_START_ADDR 0x37
+#define IDLE_MODE_OFF 0x38
+#define IDLE_MODE_ON 0x39
+#define PXL_FORMAT_SET 0x3A
+#define WRITE_MEM_CTN 0x3C
+#define READ_MEM_CTN 0x3E
+
+
+#endif // ILI9341_H

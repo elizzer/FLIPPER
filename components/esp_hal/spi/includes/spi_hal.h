@@ -16,9 +16,7 @@ typedef struct hal_spi_bus_handle_s
 
 typedef struct hal_spi_device_handle_s
 {
-
     spi_device_handle_t esp_handle;
-
 } hal_spi_device_handle_t;
 
 typedef struct hal_spi_transaction_s
@@ -37,8 +35,9 @@ typedef struct hal_spi_bus_config_s
     uint8_t mosi_io_num;   /*!< GPIO number for MOSI signal */
     uint8_t miso_io_num;   /*!< GPIO number for MISO signal */
     uint8_t sclk_io_num;   /*!< GPIO number for SCLK signal */
-    uint8_t quadwp_io_num; /*!< GPIO number for WP signal */
-    uint8_t quadhd_io_num; /*!< GPIO number for HD signal */
+    int8_t quadwp_io_num; /*!< GPIO number for WP signal */
+    int8_t quadhd_io_num; /*!< GPIO number for HD signal */
+    uint32_t max_transfer_sz; /*!< Maximum transfer size in bytes */
 
 } hal_spi_bus_config_t;
 
@@ -46,7 +45,7 @@ typedef struct hal_spi_device_config_s
 {
 
     uint8_t cs_io_num;
-    uint8_t clk_freq_hz;
+    uint32_t clk_freq_hz;
 
 } hal_spi_device_config_t;
 
