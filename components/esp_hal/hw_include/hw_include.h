@@ -16,11 +16,11 @@ typedef enum
 } spi_port_t;
 
 #define MAX_I2C_NUM 2
-typedef enum
-{
-    I2C_NUM_0 = 0,
-    I2C_NUM_1 = 1,
-} i2c_port_t;
+// typedef enum
+// {
+//     I2C_NUM_0 = 0,
+//     I2C_NUM_1 = 1,
+// } i2c_port_t;
 
 typedef enum
 {

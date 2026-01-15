@@ -86,6 +86,6 @@ void ili9341_lcd_disp_test(void)
     printf("Column address set\n");
     ili9341_set_page_addr(0, config.height - 1,&handle);
     printf("Page address set\n");
-    ili9341_send_565_pxl_data((uint8_t *)pixel_data, total_pixels, &handle);
+    ili9341_send_565_pxl_data(pixel_data, total_pixels, &handle);
     free(pixel_data);
 }

@@ -25,8 +25,10 @@ typedef struct gpio_hal_pin_config_s
     uint8_t pin_num;
     gpio_hal_mode_t mode;
     gpio_hal_pull_t pull;
-
+ 
 } gpio_hal_pin_config_t;
+
+typedef uint8_t gpio_hal_pin;
 
 esp_err_t gpio_hal_init(void);
 
