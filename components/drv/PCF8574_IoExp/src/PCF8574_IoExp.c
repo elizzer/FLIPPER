@@ -25,9 +25,9 @@ int8_t PCF8574_IoExp_init(PCF8574_handle_t *handle, PCF8574_config_t *config)
 
 	/*config the inttrupt pin if needed if needed,*/
 
-	if (config->cb == NULL)
-	{ /*No gpio intr registration is needed*/
-	}
+	// if (config->cb == NULL)
+	// { /*No gpio intr registration is needed*/
+	// }
 
 	/*probe the slave to make sure the deivce is present*/
 

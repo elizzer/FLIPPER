@@ -52,14 +52,6 @@ void IoExp_test()
 
     i2c_hal_add_device(&io_exp_i2c_dev_config, &io_exp_i2c_dev_handle, &i2c_bus_handle);
 
-    i2c_hal_transaction_t transaction;
-    i2c_hal_transaction_init(&transaction);
-
-    uint8_t sendData;
-
-    transaction.rx_buffer = &readValue;
-    transaction.rx_length = 1;
-
     // // add device
     PCF8574_config_t io_exp_config = {
         .i2c_bus_handle = &i2c_bus_handle,
