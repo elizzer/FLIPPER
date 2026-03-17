@@ -1,6 +1,63 @@
 #include "ILI9341.h"
 #include "spi_hal.h"
 #include "hw_include.h"
+#include "font_manager.h"
+#include "display_manager.h"
+#include "text.h"
+#include "esp_timer.h"
+#include "shapes.h"
+
+#define SCREEN_WIDTH 240
+#define SCREEN_HEIGHT 320
+
+#define RECT_WIDTH 100
+#define RECT_HEIGHT 60
+
+static displayHandle_t disp_handle;
+
+void draw_pixel_wrapper(uint16_t x, uint16_t y, uint16_t color)
+{
+    display_drawPixel(&disp_handle, x, y, color);
+}
+
+typedef struct
+{
+    int x;
+    int y;
+    int vx;
+    int vy;
+} Rectangle;
+
+// Render function (called every iteration)
+void render(Rectangle rect,uint16_t color)
+{
+    // In real graphics, this would draw to screen
+    // Here we just print coordinates
+    // printf("Drawing rectangle at (%d, %d)\n", rect.x, rect.y);
+    display_clearBuffer(&disp_handle);
+    draw_rectangle(rect.x, rect.y, RECT_WIDTH, RECT_HEIGHT, color);
+    display_writeBuffer(&disp_handle);
+}
+
+// Update physics
+void update(Rectangle *rect)
+{
+    // Move rectangle
+    rect->x += rect->vx;
+    rect->y += rect->vy;
+
+    // Bounce on left/right edges
+    if (rect->x <= 0 || rect->x + RECT_WIDTH >= SCREEN_WIDTH)
+    {
+        rect->vx = -rect->vx;
+    }
+
+    // Bounce on top/bottom edges
+    if (rect->y <= 0 || rect->y + RECT_HEIGHT >= SCREEN_HEIGHT)
+    {
+        rect->vy = -rect->vy;
+    }
+}
 
 void ili9341_lcd_disp_test(void)
 {
@@ -13,7 +70,7 @@ void ili9341_lcd_disp_test(void)
         .sclk_io_num = IO_NUM_18,
         .quadwp_io_num = -1,
         .quadhd_io_num = -1,
-        .max_transfer_sz = (240*320*2), // 2 KB
+        .max_transfer_sz = (240 * 320 * 2), // 2 KB
     };
 
     hal_spi_bus_handle_t bus_handle;
@@ -26,7 +83,7 @@ void ili9341_lcd_disp_test(void)
 
     hal_spi_device_config_t device_config = {
         .cs_io_num = IO_NUM_5,
-        .clk_freq_hz = 1 * 1000 * 1000, // 1 MHz
+        .clk_freq_hz = 30 * 1000 * 1000, // 1 MHz
     };
 
     hal_spi_device_handle_t device_handle;
@@ -39,7 +96,8 @@ void ili9341_lcd_disp_test(void)
     }
 
     /* Example: Fill the screen with a solid color */
-    uint16_t color = 0xF800; // Red color in RGB565
+    uint16_t color = 0x0000; // Red color in RGB565
+    // uint16_t bg_color = 0x0000; // Black color in RGB565
 
     ili9341_config_t config = {
         .width = 240,
@@ -63,29 +121,58 @@ void ili9341_lcd_disp_test(void)
         return;
     }
 
-   
+    displayConfig_t disp_config = {
+        .width = config.width,
+        .height = config.height,
+        .frame_buffer = NULL,                       // This will be allocated in display_init
+        .write_buffer_func = ili9341_send_dips_buf, // Set the function pointer to send buffer to ILI9341
+        .display_device_handle = &handle,           // Pass the ILI9341 handle to the display config
+    };
 
-    // Fill screen with red color
-    uint32_t total_pixels = config.width * config.height;
-    printf("Total pixels: %ld\n", total_pixels);
-    uint16_t *pixel_data = malloc(total_pixels * sizeof(uint16_t));
-    printf("Allocated pixel data buffer at %p\n", pixel_data);
-    if (pixel_data == NULL)
+    // displayHandle_t disp_handle;
+    int8_t status;
+    status = display_init(&disp_config, &disp_handle);
+    if (status != 0)
     {
-        printf("Failed to allocate memory for pixel data\n");
+        printf("Failed to initialize display manager\n");
         return;
     }
-    for (uint32_t i = 0; i < total_pixels; i++)
+
+    status = shape_init(draw_pixel_wrapper);
+    if (status != 0)
     {
-        pixel_data[i] = color;
+        printf("Failed to initialize shapes module\n");
+        return;
     }
 
-    printf("Setting column and page addresses\n");
+    Rectangle rect;
 
-    ili9341_set_col_addr(0, config.width - 1,&handle);
-    printf("Column address set\n");
-    ili9341_set_page_addr(0, config.height - 1,&handle);
-    printf("Page address set\n");
-    ili9341_send_565_pxl_data(pixel_data, total_pixels, &handle);
-    free(pixel_data);
+    // Initial position
+    rect.x = 10;
+    rect.y = 10;
+
+    // Initial velocity
+    rect.vx = 3;
+    rect.vy = 2;
+
+    Rectangle prevRect;
+    display_clearBuffer(&disp_handle);
+    uint16_t rect_color = 0x0000;
+    while (1)
+    {
+        // render(prevRect,0x0000);
+
+        update(&rect);
+        render(rect,rect_color++);
+        vTaskDelay(pdMS_TO_TICKS(16)); 
+        prevRect.x = rect.x;
+        prevRect.y = rect.y;
+        // prevRect.vx = rect.vx;
+        // prevRect.vy = rect.vy;
+
+        // Control speed (~60 FPS)
+        // usleep(16000);
+    }
+
+    display_deinit(&disp_handle);
 }

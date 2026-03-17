@@ -50,6 +50,7 @@ void ili9341_send_565_pxl_data(uint16_t *data, size_t len, ili9341_handle_t *han
 void ili9341_set_col_addr(uint16_t start, uint16_t end, ili9341_handle_t *handle);
 void ili9341_set_page_addr(uint16_t start, uint16_t end, ili9341_handle_t *handle);
 
+int8_t ili9341_send_dips_buf(uint16_t *buf, uint16_t x, uint16_t y, uint16_t width, uint16_t height, void *handle);
 
 
 #endif // ILI9341_H

@@ -9,6 +9,7 @@
 
 
 typedef struct PCF8574_config_s PCF8574_handle_t;
+typedef void (* IoEXPIntCB)(void);
 
 typedef enum PCF8574_IoExp_pinValue_e{
     IO_EXP_LOW,
@@ -27,7 +28,6 @@ typedef struct PCF8574_config_s{
     uint8_t max_pins; /*Max no of pins per port*/
     uint8_t max_port;
     gpio_hal_pin init_gpio;
-    void (* cb)(uint8_t *pin_values);
 }PCF8574_config_t;
 
 
@@ -46,7 +46,7 @@ int8_t PCF8574_IoExp_configPin(PCF8574_handle_t *,PCF8574_pin_config_t pin_confi
 int8_t PCF8574_IoExp_setPin(PCF8574_handle_t *,uint8_t pinNo, uint8_t value);
 int8_t PCF8574_IoExp_readPin(PCF8574_handle_t *,uint8_t pinNo,uint8_t *value);
 
-esp_err_t i2c_hal_probe(i2c_hal_bus_handle_t *bus_handle, i2c_hal_device_handle_t *dev_handle);
+// esp_err_t i2c_hal_probe(i2c_hal_bus_handle_t *bus_handle, i2c_hal_device_handle_t *dev_handle);
 
 
 #endif /* PCF8574_IOEXP_H */

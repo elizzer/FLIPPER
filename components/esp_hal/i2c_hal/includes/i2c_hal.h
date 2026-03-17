@@ -61,9 +61,13 @@ esp_err_t i2c_hal_deinit(i2c_hal_bus_handle_t *handle);
 esp_err_t i2c_hal_add_device(const i2c_hal_device_config_t *config, i2c_hal_device_handle_t *dev_handle, i2c_hal_bus_handle_t *bus_handle);
 esp_err_t i2c_hal_remove_device(i2c_hal_device_handle_t *handle);
 
-
-
 esp_err_t i2c_hal_transaction_init(i2c_hal_transaction_t *transaction);
 esp_err_t i2c_hal_transfer(i2c_hal_transaction_t *transaction, i2c_hal_device_handle_t *handle);
+
+
+esp_err_t i2c_hal_device_probe(i2c_hal_bus_handle_t *bus_handle, i2c_hal_device_handle_t *dev_handle);
+esp_err_t i2c_hal_probe(i2c_hal_bus_handle_t *bus_handle, uint8_t i2c_addr);
+
+
 
 #endif // I2C_HAL_H

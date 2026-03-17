@@ -114,7 +114,7 @@ esp_err_t i2c_hal_transfer(i2c_hal_transaction_t *transaction, i2c_hal_device_ha
 
 }
 
-esp_err_t i2c_hal_probe(i2c_hal_bus_handle_t *bus_handle, i2c_hal_device_handle_t *dev_handle)
+esp_err_t i2c_hal_device_probe(i2c_hal_bus_handle_t *bus_handle, i2c_hal_device_handle_t *dev_handle)
 {
     esp_err_t status;
 
@@ -129,3 +129,18 @@ esp_err_t i2c_hal_probe(i2c_hal_bus_handle_t *bus_handle, i2c_hal_device_handle_
     return status;
 }
 
+
+esp_err_t i2c_hal_probe(i2c_hal_bus_handle_t *bus_handle, uint8_t i2c_addr)
+{
+    esp_err_t status;
+
+    if (bus_handle == NULL)
+    {
+        printf("Invalid pointers as parameter");
+        return -1;
+    }
+
+    status = i2c_master_probe(bus_handle->bus_handle, i2c_addr, -1);
+
+    return status;
+}

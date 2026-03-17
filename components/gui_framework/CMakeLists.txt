@@ -1,0 +1,14 @@
+idf_component_register(
+	SRCS
+	"font_manager/font_manager.c"
+	"font_manager/fonts.c"
+	"display_manager/display_manager.c"
+	"text/text.c"
+	"shapes/shapes.c"
+	INCLUDE_DIRS
+	"font_manager"
+	"display_manager"
+	"text"
+        "shapes"
+	REQUIRES
+)

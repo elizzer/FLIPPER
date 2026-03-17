@@ -89,9 +89,8 @@ int8_t ili9341_init(ili9341_config_t config, ili9341_handle_t *handle)
 
     gpio_hal_set_level(config.dc_io_num, 1);
 
-
     printf("\n\rILI9341 Initialization Started");
-    
+
     // copy config to handle
     // *((ili9341_config_t *)handle) = config;
     memcpy(handle, &config, sizeof(ili9341_config_t));
@@ -109,7 +108,6 @@ int8_t ili9341_init(ili9341_config_t config, ili9341_handle_t *handle)
     }
 
     gpio_hal_set_level(config.dc_io_num, 0);
-
 
     return 0;
 }
@@ -172,14 +170,14 @@ void ili9341_send_565_pxl_data(uint16_t *data, size_t len, ili9341_handle_t *han
 {
     ili9341_config_t *config = (ili9341_config_t *)handle;
 
-    ili9341_send_command(MEM_WRITE,handle);
-  
-    printf("Sending pixel data...\n");
+    ili9341_send_command(MEM_WRITE, handle);
+
+    // printf("Sending pixel data...\n");
     hal_spi_transaction_t transaction;
-   
+
     esp_err_t ret;
     ret = ili9341_send_data((uint8_t *)data, len * 2, handle); // Each pixel is 2 bytes
-    printf("Pixel data sent.\n");
+    // printf("Pixel data sent.\n");
     if (ret != ESP_OK)
     {
         printf("Failed to send pixel data\n");
@@ -191,11 +189,9 @@ void ili9341_send_565_pxl_data(uint16_t *data, size_t len, ili9341_handle_t *han
 void ili9341_set_col_addr(uint16_t start, uint16_t end, ili9341_handle_t *handle)
 {
 
-    printf("Setting column address\n");
 
     ili9341_send_command(COL_ADDR_SET, handle);
 
-    printf("Setting column address: start=%d, end=%d\n", start, end);
 
     ili9341_config_t *config = (ili9341_config_t *)handle;
 
@@ -203,29 +199,29 @@ void ili9341_set_col_addr(uint16_t start, uint16_t end, ili9341_handle_t *handle
     t_data = SWAP_32BIT_BYTE_ORDER(t_data);
     // ILI9341_send_data(&t_data,1);
     esp_err_t ret;
-    printf("Transferring column address data\n");
     ret = ili9341_send_data((uint8_t *)&t_data, 4, handle);
-    printf("Column address data transferred\n");
 }
 
-void ili9341_set_page_addr(uint16_t start, uint16_t end, ili9341_handle_t *handle) //row
+void ili9341_set_page_addr(uint16_t start, uint16_t end, ili9341_handle_t *handle) // row
 {
-
     ili9341_send_command(PAGE_ADDR_SET, handle);
 
     ili9341_config_t *config = (ili9341_config_t *)handle;
 
     uint32_t t_data = ((start << 16) | (end));
     t_data = SWAP_32BIT_BYTE_ORDER(t_data);
-    // ILI9341_send_data(&t_data,1);
+  
 
     esp_err_t ret;
-   
-    ret = ili9341_send_data((uint8_t *)&t_data, 4, handle);
 
+    ret = ili9341_send_data((uint8_t *)&t_data, 4, handle);
 }
 
-
-void ili9341_send_dips_buf(uint16_t *buf, uint8_t x, uint8_t y, uint8_t width, uint8_t height){
-
+int8_t ili9341_send_dips_buf(uint16_t *buf, uint16_t x, uint16_t y, uint16_t width, uint16_t height, void *handle)
+{
+    // printf("Sending display buffer to ILI9341: x=%d, y=%d, width=%d, height=%d\n", x, y, width, height);
+    ili9341_set_col_addr(x, width - 1, (ili9341_handle_t *)handle);
+    ili9341_set_page_addr(y, height - 1, (ili9341_handle_t *)handle);
+    ili9341_send_565_pxl_data(buf, width * height, (ili9341_handle_t *)handle);
+    return 0;
 }

@@ -3,6 +3,16 @@
 #include "PCF8574_IoExp.h"
 #include <stdio.h>
 #include <string.h>
+#include "event_manager.h"
+
+static void IRAM_ATTR keypad_isr_handler(void *arg)
+{
+    uint8_t gpio_num = (uint32_t)arg;  // which row fired, passed via arg
+
+    // post to event manager — ISR safe, non-blocking
+    post_semaphore_from_isr(KEYPAD_EVENT);
+
+}
 
 int8_t PCF8574_IoExp_init(PCF8574_handle_t *handle, PCF8574_config_t *config)
 {
@@ -22,11 +32,11 @@ int8_t PCF8574_IoExp_init(PCF8574_handle_t *handle, PCF8574_config_t *config)
 	/*probe the slave to make sure the deivce is present*/
 
 	/*copy config into handle*/
-	memcpy(handle, &config, sizeof(PCF8574_config_t));
+	memcpy(handle, config, sizeof(PCF8574_config_t));
 
 	int8_t status;
 
-	status = i2c_hal_probe(handle->i2c_bus_handle, handle->i2c_device_handle);
+	status = i2c_hal_device_probe(handle->i2c_bus_handle, handle->i2c_device_handle);
 
 	if (status != 0)
 	{
@@ -99,7 +109,7 @@ int8_t PCF8574_IoExp_readPin(PCF8574_handle_t *handle, uint8_t pinNo, uint8_t *v
 
 	status = i2c_hal_transfer(&transaction, config->i2c_device_handle);
 
-	*value = (readValue >> pinNo) & 0xFE;
+	*value = (readValue >> pinNo) & 0x01;
 
 	return status;
 }
