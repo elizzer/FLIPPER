@@ -2,17 +2,12 @@
 #include "PCF8574_IoExp.h"
 #include <stdint.h>
 #include <driver/gpio.h>
+#include "keypad.h"
 #include "event_manager.h"
 
-PCF8574_handle_t io_exp_handle;
+static PCF8574_handle_t io_exp_handle;
 
-void IO_exp_event_handler()
-{
-    uint8_t readValue;
-    int8_t status;
-    status = PCF8574_IoExp_readPin(&io_exp_handle, 1, &readValue);
-    printf("\nRead Value 0x%20x", readValue);
-}
+
 
 void IoExp_test()
 {
@@ -25,7 +20,7 @@ void IoExp_test()
         .i2c_instance = I2C_NUM_0,
     };
 
-    i2c_hal_bus_handle_t i2c_bus_handle;
+    static i2c_hal_bus_handle_t i2c_bus_handle;
 
     i2c_hal_init(&i2c_bus_config, &i2c_bus_handle);
 
@@ -48,30 +43,32 @@ void IoExp_test()
         .device_address = 32,
     };
 
-    i2c_hal_device_handle_t io_exp_i2c_dev_handle;
+    static i2c_hal_device_handle_t io_exp_i2c_dev_handle;
 
     i2c_hal_add_device(&io_exp_i2c_dev_config, &io_exp_i2c_dev_handle, &i2c_bus_handle);
-
+    printf("\nAdded i2c device");
+    
     // // add device
     PCF8574_config_t io_exp_config = {
         .i2c_bus_handle = &i2c_bus_handle,
         .i2c_device_handle = &io_exp_i2c_dev_handle,
         .max_pins = 8,
         .max_port = 1,
-        .init_gpio = GPIO_NUM_32,
+        .init_gpio = GPIO_NUM_26,
     };
-
+    
     // init io exp
     PCF8574_IoExp_init(&io_exp_handle, &io_exp_config);
+    printf("\n IOEXP init");
+    
 
-    uint8_t cid;
+    keypad_config_t keypad_config = {
+        .buttons =5,
+        .ioExp_handle = &io_exp_handle
+    };
 
-    register_event(KEYPAD_EVENT,&cid);
+    static keypad_handle_t keypad_handle; 
 
-    printf("\n Keypad event registerd consumer id is %d",cid);
+    keypad_init(&keypad_config,&keypad_handle);
 
-    while (1)
-    {
-        
-    }
 }

@@ -10,6 +10,7 @@
 
 typedef enum Event_type_e
 {
+    IO_EXP_EVENT,
     KEYPAD_EVENT,
     EVENT_TYPE_MAX
 } Event_type_t;

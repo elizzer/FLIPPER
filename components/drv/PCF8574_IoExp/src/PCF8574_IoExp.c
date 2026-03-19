@@ -4,14 +4,15 @@
 #include <stdio.h>
 #include <string.h>
 #include "event_manager.h"
+#include <driver/gpio.h> 
 
 static void IRAM_ATTR keypad_isr_handler(void *arg)
 {
-    uint8_t gpio_num = (uint32_t)arg;  // which row fired, passed via arg
-
-    // post to event manager — ISR safe, non-blocking
-    post_semaphore_from_isr(KEYPAD_EVENT);
-
+	uint8_t gpio_num = (uint32_t)arg; // which row fired, passed via arg
+	gpio_intr_disable(gpio_num); 
+	// post to event manager — ISR safe, non-blocking
+	post_semaphore_from_isr(IO_EXP_EVENT);
+	gpio_intr_enable(gpio_num);
 }
 
 int8_t PCF8574_IoExp_init(PCF8574_handle_t *handle, PCF8574_config_t *config)
@@ -34,6 +35,18 @@ int8_t PCF8574_IoExp_init(PCF8574_handle_t *handle, PCF8574_config_t *config)
 	/*copy config into handle*/
 	memcpy(handle, config, sizeof(PCF8574_config_t));
 
+	// configure the gpio intrupt
+	gpio_hal_pin_config_t ioExp_int_pin = {
+		.pin_num = config->init_gpio,
+		.mode = GPIO_HAL_INPUT,
+		.pull = GPIO_HAL_PULLUP,
+		.intr_type = GPIO_HAL_INTR_NEGEDGE,
+	};
+
+	gpio_hal_config_pin(&ioExp_int_pin);
+
+	gpio_hal_isr_register(config->init_gpio, keypad_isr_handler, NULL);
+
 	int8_t status;
 
 	status = i2c_hal_device_probe(handle->i2c_bus_handle, handle->i2c_device_handle);
@@ -52,7 +65,7 @@ int8_t PCF8574_IoExp_configPin(PCF8574_handle_t *, PCF8574_pin_config_t pin_conf
 	return 0;
 }
 
-int8_t PCF8574_IoExp_setPin(PCF8574_handle_t *handle, uint8_t pinNo, uint8_t value)
+int8_t PCF8574_IoExp_setPin(PCF8574_handle_t *handle, uint8_t portNo, uint8_t pinNo, uint8_t value)
 {
 
 	if (handle == NULL)
@@ -77,17 +90,52 @@ int8_t PCF8574_IoExp_setPin(PCF8574_handle_t *handle, uint8_t pinNo, uint8_t val
 	i2c_hal_transaction_init(&transaction);
 
 	sendData = (readValue && ~(0x01 << pinNo)) | (value << pinNo);
+	// sendData = value;
 
 	transaction.tx_buffer = &sendData;
 	transaction.tx_length = 1;
 
 	status = i2c_hal_transfer(&transaction, config->i2c_device_handle);
 
+	return status;
+}
+
+int8_t PCF8574_IoExp_setPort(PCF8574_handle_t *handle, uint8_t portNo, uint8_t value)
+{
+
+	if (handle == NULL)
+	{
+		printf("Invalid pointer parameters");
+		return -1; /*Invalid handle*/
+	}
+
+	PCF8574_config_t *config = (PCF8574_config_t *)handle;
+	i2c_hal_transaction_t transaction;
+	i2c_hal_transaction_init(&transaction);
+
+	uint8_t sendData;
+	uint8_t readValue;
+	int8_t status;
+
+	transaction.rx_buffer = &readValue;
+	transaction.rx_length = 1;
+
+	status = i2c_hal_transfer(&transaction, config->i2c_device_handle);
+
+	i2c_hal_transaction_init(&transaction);
+
+	// sendData = (readValue && ~(0x01 << pinNo)) | (value << pinNo);
+	sendData = value;
+
+	transaction.tx_buffer = &sendData;
+	transaction.tx_length = 1;
+
+	status = i2c_hal_transfer(&transaction, config->i2c_device_handle);
 
 	return status;
 }
 
-int8_t PCF8574_IoExp_readPin(PCF8574_handle_t *handle, uint8_t pinNo, uint8_t *value)
+int8_t PCF8574_IoExp_readPin(PCF8574_handle_t *handle, uint8_t portNo, uint8_t pinNo, uint8_t *value)
 {
 
 	if (handle == NULL || value == NULL)
@@ -110,6 +158,35 @@ int8_t PCF8574_IoExp_readPin(PCF8574_handle_t *handle, uint8_t pinNo, uint8_t *v
 	status = i2c_hal_transfer(&transaction, config->i2c_device_handle);
 
 	*value = (readValue >> pinNo) & 0x01;
+	// *value = readValue;
+
+	return status;
+}
+
+int8_t PCF8574_IoExp_readPort(PCF8574_handle_t *handle, uint8_t portNo, uint8_t *value)
+{
+
+	if (handle == NULL || value == NULL)
+	{
+		printf("Invalid pointer parameters");
+		return -1; /*Invalid handle*/
+	}
+
+	PCF8574_config_t *config = (PCF8574_config_t *)handle;
+
+	i2c_hal_transaction_t transaction;
+	i2c_hal_transaction_init(&transaction);
+
+	uint8_t readValue;
+	int8_t status;
+
+	transaction.rx_buffer = &readValue;
+	transaction.rx_length = 1;
+
+	status = i2c_hal_transfer(&transaction, config->i2c_device_handle);
+
+	// *value = (readValue >> pinNo) & 0x01;
+	*value = readValue;
 
 	return status;
 }
