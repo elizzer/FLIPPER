@@ -1,0 +1,46 @@
+{
+    "name": "ESP-IDF Development Environment",
+    "image": "espressif/idf:v5.3",
+
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "espressif.esp-idf-extension",
+                "ms-vscode.cpptools",
+                "ms-vscode.cmake-tools",
+                "twxs.cmake",
+                "marus25.cortex-debug",
+                "keroc.hex-fmt",
+                "zachflower.uncrustify"
+            ],
+            "settings": {
+                "idf.espIdfPath": "/opt/esp/idf",
+                "idf.toolsPath": "/opt/esp/tools",
+                "idf.pythonBinPath": "/opt/esp/python_env/idf5.3_py3.11_env/bin/python",
+                "idf.customExtraPaths": "/opt/esp/tools/tools/xtensa-esp-elf/esp-13.2.0_20240530/xtensa-esp-elf/bin",
+                "terminal.integrated.defaultProfile.linux": "bash",
+                "terminal.integrated.env.linux": {
+                    "IDF_PATH": "/opt/esp/idf",
+                    "IDF_TOOLS_PATH": "/opt/esp/tools"
+                },
+                "C_Cpp.intelliSenseEngine": "default",
+                "editor.formatOnSave": true,
+                "editor.tabSize": 4,
+                "editor.insertSpaces": true
+            }
+        }
+    },
+
+    "postCreateCommand": "idf.py --version",
+
+    "remoteEnv": {
+        "IDF_PATH": "/opt/esp/idf",
+        "IDF_TOOLS_PATH": "/opt/esp/tools"
+    },
+
+    "features": {
+        "ghcr.io/devcontainers/features/git:1": {}
+    },
+
+    "remoteUser": "root"
+}
