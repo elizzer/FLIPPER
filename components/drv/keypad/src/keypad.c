@@ -143,7 +143,7 @@ int8_t keypad_init(keypad_config_t *config, keypad_handle_t *handle)
     memset(handle->cur_raw,  0xFF, buf_size);
 
     /* register for io exp event */
-    if (register_event(IO_EXP_EVENT, &handle->consumer_id) != 0)
+    if (register_event(EVENT_TYPE_IO_EXP, &handle->consumer_id) != 0)
     {
         printf("\nkeypad_init: event registration failed");
         free(handle->keys);
@@ -226,7 +226,7 @@ int8_t keypad_deinit(keypad_handle_t *handle)
     }
 
     /* unregister from event manager */
-    unregister_event(IO_EXP_EVENT, handle->consumer_id);
+    unregister_event(EVENT_TYPE_IO_EXP, handle->consumer_id);
 
     /* free all allocations */
     free(handle->keys);
