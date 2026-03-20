@@ -11,7 +11,7 @@ static void IRAM_ATTR keypad_isr_handler(void *arg)
 	uint8_t gpio_num = (uint32_t)arg; // which row fired, passed via arg
 	gpio_intr_disable(gpio_num); 
 	// post to event manager — ISR safe, non-blocking
-	post_semaphore_from_isr(IO_EXP_EVENT);
+	post_semaphore_from_isr(EVENT_TYPE_IO_EXP);
 	gpio_intr_enable(gpio_num);
 }
 

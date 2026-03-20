@@ -2,6 +2,8 @@
     "name": "ESP-IDF Development Environment",
     "image": "espressif/idf:v5.3",
 
+
+    
     "customizations": {
         "vscode": {
             "extensions": [

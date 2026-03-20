@@ -6,6 +6,7 @@
 #include "esp_err.h"
 #include "driver/i2c_master.h"
 
+typedef uint8_t I2C_7BitAddress_t
 
 typedef struct i2c_hal_config_s
 {

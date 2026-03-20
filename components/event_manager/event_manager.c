@@ -8,7 +8,7 @@
 SemaphoreHandle_t consumer_sem_mapping[EVENT_TYPE_MAX][MAX_SEM_PER_EVENT_TYPE];
 static SemaphoreHandle_t mapping_mutex;
 
-int8_t init_eventManager()
+int8_t event_manager_init()
 {
 
     for (uint8_t i = 0; i < EVENT_TYPE_MAX; i++)
@@ -22,7 +22,7 @@ int8_t init_eventManager()
     return 0;
 }
 
-int8_t register_event(Event_type_t event_type, uint8_t *consumer_id)
+int8_t event_manager_register_event(EventType_t event_type, uint8_t *consumer_id)
 {
     if (event_type >= EVENT_TYPE_MAX)
     {
@@ -46,7 +46,7 @@ int8_t register_event(Event_type_t event_type, uint8_t *consumer_id)
     return -1;
 }
 
-int8_t unregister_event(Event_type_t event_type, uint8_t consumer_id)
+int8_t event_manager_unregister_event(EventType_t event_type, uint8_t consumer_id)
 {
     if (event_type >= EVENT_TYPE_MAX)
     {
@@ -65,7 +65,7 @@ int8_t unregister_event(Event_type_t event_type, uint8_t consumer_id)
     return 0;
 }
 
-int8_t post_semaphore(Event_type_t event_type)
+int8_t event_manager_post_event(EventType_t event_type)
 {
     // check event_type is valid
     if (event_type >= EVENT_TYPE_MAX)
@@ -86,7 +86,7 @@ xSemaphoreTake(mapping_mutex, portMAX_DELAY);
 }
 
 // Add an ISR-safe post function
-int8_t post_semaphore_from_isr(Event_type_t event_type)
+int8_t event_manager_post_event_from_isr(EventType_t event_type)
 {
     if (event_type >= EVENT_TYPE_MAX)
         return -1;
@@ -103,7 +103,7 @@ int8_t post_semaphore_from_isr(Event_type_t event_type)
     return 0;
 }
 
-int8_t wait_semaphore(Event_type_t event_type, uint8_t consumer_id)
+int8_t event_manager_wait_event(EventType_t event_type, uint8_t consumer_id)
 {
     if (event_type >= EVENT_TYPE_MAX)
     {

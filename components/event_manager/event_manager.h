@@ -8,25 +8,26 @@
 
 #define MAX_SEM_PER_EVENT_TYPE 10
 
-typedef enum Event_type_e
+typedef enum EventType_e
 {
-    IO_EXP_EVENT,
-    KEYPAD_EVENT,
+    EVENT_TYPE_IO_EXP,
+    EVENT_TYPE_KEYPAD,
     EVENT_TYPE_MAX
-} Event_type_t;
+} EventType_t;
 
-typedef struct Event_s
+typedef struct EventDescription_s
 {
     Event_type_t event_type;
     uint8_t event_source;
-} Event_t;
+} EventDescription_t;
 
-// creates a event queue
-int8_t init_eventManager();
-int8_t post_semaphore(Event_type_t);
-int8_t post_semaphore_from_isr(Event_type_t event_type);
-int8_t wait_semaphore(Event_type_t, uint8_t);
-int8_t register_event(Event_type_t, uint8_t*);
-int8_t unregister_event(Event_type_t, uint8_t);
+
+int8_t event_manager_init();
+int8_t event_manager_post_event(EventType_t);
+int8_t event_manager_post_event_from_isr(EventType_t event_type);
+int8_t event_manager_wait_event(EventType_t, uint8_t);
+int8_t event_manager_register_event(EventType_t, uint8_t*);
+int8_t event_manager_unregister_event(EventType_t, uint8_t);
+
 
 #endif // EVENT_MANAGER_H

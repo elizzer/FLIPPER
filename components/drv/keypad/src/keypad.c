@@ -39,7 +39,7 @@ static void keypad_listen_task(void *pvParameters)
 
     while (1)
     {
-        wait_semaphore(IO_EXP_EVENT, cid);
+        wait_semaphore(EVENT_TYPE_IO_EXP, cid);
         printf("\nIO EXP event trigreed");
         /* read current port state from io expander */
         for (uint8_t port = 0; port < buf_size; port++)
