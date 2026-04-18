@@ -1,15 +1,7 @@
 #include "display_manager.h"
 #include <stdio.h>
 
-static uint16_t dirty_x1=240, dirty_y1=320, dirty_x2=0, dirty_y2=0; // Dirty region coordinates
 
-static void reset_dirty_region()
-{
-    dirty_x1 = 240;
-    dirty_y1 = 320;
-    dirty_x2 = 0;
-    dirty_y2 = 0;
-}
 
 int8_t display_init(displayConfig_t *config, displayHandle_t *handle)
 {
@@ -40,7 +32,7 @@ int8_t display_init(displayConfig_t *config, displayHandle_t *handle)
     }
     printf("Display buffer allocated at address: %p\n", (void *)config->frame_buffer);
 
-    // Initialize the dirty region
+   
 
     // copy the config to the handle, the memory for the handle is allocated in the caller function
     memcpy(handle, config, sizeof(displayConfig_t));
@@ -92,21 +84,13 @@ int8_t display_writeBuffer(displayHandle_t *handle) // writes the frame buffer t
         return -1;
     }
     // printf("Writing buffer to display using function pointer\n");
-    //check values of dirty region
-    if ( dirty_y1 > dirty_y2)
-    {
-        // No updates, skip writing to display
-        printf("No updates to display, skipping buffer write\n");
-        return 0;
-    }
-    int8_t result = disp_config->write_buffer_func(disp_config->frame_buffer + dirty_y1 * disp_config->width, 0, dirty_y1, disp_config->width, dirty_y2 - dirty_y1 + 1, disp_config->display_device_handle);
+ 
+    
+    int8_t result = disp_config->write_buffer_func(disp_config->frame_buffer , 0, 0, disp_config->width, disp_config->height, disp_config->display_device_handle);
     if (result != 0)    {
         printf("Error: write_buffer_func failed to write buffer to display\n");
         return -1;
     }
-    reset_dirty_region(); // Reset the dirty region after writing
-    // int8_t result = disp_config->write_buffer_func( disp_config->frame_buffer,0,0, disp_config->width, disp_config->height,disp_config->display_device_handle);
-    // Reset the dirty region after writing
 
     return 0;
 }
@@ -121,10 +105,6 @@ int8_t display_clearBuffer(displayHandle_t *handle)
     displayConfig_t *disp_config = (displayConfig_t *)(handle);
 
     memset(disp_config->frame_buffer, 0x00, (disp_config->width) * (disp_config->height) * sizeof(uint16_t));
-    dirty_x1 = 0;
-    dirty_y1 = 0;
-    dirty_x2 = disp_config->width - 1;
-    dirty_y2 = disp_config->height - 1;
     return 0;
 }
 
@@ -148,19 +128,8 @@ int8_t display_drawPixel(void *handle, uint16_t x, uint16_t y, uint16_t color)
     }
 
     // Set the pixel color in the frame buffer
-    disp_config->frame_buffer[y * disp_config->width + x] = color;
-
-    // Update the dirty region
-    if (x < dirty_x1)
-        dirty_x1 = x;
-    if (y < dirty_y1)
-        dirty_y1 = y;
-    if (x > dirty_x2)
-        dirty_x2 = x;
-    if (y > dirty_y2)
-        dirty_y2 = y;
-
-
+    disp_config->frame_buffer[y * disp_config->width + x] = SWAP_16BIT_BYTE_ORDER(color);
+ 
     return 0;
 }
 

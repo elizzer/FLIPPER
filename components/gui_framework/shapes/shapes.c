@@ -38,7 +38,7 @@ int8_t draw_horizontal_line(int x1, int x2, int y, uint16_t color)
         x1 = x2;
         x2 = temp;
     }
-    for (int x = x1; x <= x2; x++)
+    for (int x = x1; x < x2; x++)
     {
         draw_pixel(x, y, color);
     }
@@ -58,7 +58,7 @@ int8_t draw_vertical_line(int x, int y1, int y2, uint16_t color)
         y1 = y2;
         y2 = temp;
     }
-    for (int y = y1; y <= y2; y++)
+    for (int y = y1; y < y2; y++)
     {
         draw_pixel(x, y, color);
     }
@@ -103,46 +103,61 @@ int8_t draw_vertical_line(int x, int y1, int y2, uint16_t color)
 // 	}
 // 	return 0; //success
 // }
-int8_t draw_line(int x1, int y1, int x2, int y2, uint16_t color) {
+int8_t draw_line(int x1, int y1, int x2, int y2, uint16_t color)
+{
     int8_t result = validate_draw_pixel();
-    if (result != 0) {
+    if (result != 0)
+    {
         printf("Error: draw_pixel function pointer is not set\n");
         return -1; // Failure
     }
 
     // Single point
-    if (x1 == x2 && y1 == y2) {
+    if (x1 == x2 && y1 == y2)
+    {
         draw_pixel(x1, y1, color);
         return 0;
     }
 
     // Horizontal line
-    if (y1 == y2) {
+    if (y1 == y2)
+    {
         draw_horizontal_line(x1, x2, y1, color);
         return 0;
     }
 
     // Vertical line
-    if (x1 == x2) {
+    if (x1 == x2)
+    {
         draw_vertical_line(x1, y1, y2, color);
         return 0;
     }
 
     // Skewed line — Bresenham's algorithm
-    int dx =  abs(x2 - x1);
+    int dx = abs(x2 - x1);
     int dy = -abs(y2 - y1);
     int sx = (x1 < x2) ? 1 : -1; // step direction X
     int sy = (y1 < y2) ? 1 : -1; // step direction Y
     int err = dx + dy;
 
-    while (1) {
+    while (1)
+    {
         draw_pixel(x1, y1, color);
 
-        if (x1 == x2 && y1 == y2) break;
+        if (x1 == x2 && y1 == y2)
+            break;
 
         int e2 = 2 * err;
-        if (e2 >= dy) { err += dy; x1 += sx; }
-        if (e2 <= dx) { err += dx; y1 += sy; }
+        if (e2 >= dy)
+        {
+            err += dy;
+            x1 += sx;
+        }
+        if (e2 <= dx)
+        {
+            err += dx;
+            y1 += sy;
+        }
     }
 
     return 0; // Success
@@ -162,35 +177,101 @@ int8_t draw_rectangle(int x, int y, int width, int height, uint16_t color)
     return 0;
 }
 
-int8_t draw_filled_rectangle(int x, int y, int width, int height, uint16_t color){
-	int8_t result = validate_draw_pixel();
+int8_t draw_filled_rectangle(int x, int y, int width, int height, uint16_t color)
+{
+    int8_t result = validate_draw_pixel();
     if (result != 0)
     {
-       	printf("Error: draw_pixel function pointer is not set\n");
-       	return -1; // Error: draw_pixel function pointer is not set
+        printf("Error: draw_pixel function pointer is not set\n");
+        return -1; // Error: draw_pixel function pointer is not set
     }
-	if (width == 0 && height == 0) { //Point
-		draw_pixel (x, y, color);
-		return 0;
-	}
-	if (width == 0) { //Vertical line
-		draw_vertical_line (x, y,y+height, color);
-		return 0;
-	}
-	if (height == 0) { //Horizontal line
-		draw_horizontal_line (x,x+width, y, color);
-		return 0;
-	}
+    if (width == 0 && height == 0)
+    { // Point
+        draw_pixel(x, y, color);
+        return 0;
+    }
+    if (width == 0)
+    { // Vertical line
+        draw_vertical_line(x, y, y + height, color);
+        return 0;
+    }
+    if (height == 0)
+    { // Horizontal line
+        draw_horizontal_line(x, x + width, y, color);
+        return 0;
+    }
 
-	//filling rectangle
-	for (int i = 0; i < height; i++, y++) {
-		draw_horizontal_line (x,x+width, y, color);
-	}
+    // filling rectangle
+    for (int i = 0; i < height; i++, y++)
+    {
+        draw_horizontal_line(x, x + width, y, color);
+    }
     return 0;
 }
 
-//int8_t draw_circle(int x_center, int y_center, int radius, uint16_t color);
-// int8_t draw_filled_circle(int x_center, int y_center, int radius, uint16_t color);
+int8_t draw_circle(int x_center, int y_center, int radius, uint16_t color)
+{
+    return 0;
+}
+int8_t draw_filled_circle(int x_center, int y_center, int radius, uint16_t color)
+{
+    return 0;
+}
+
+int8_t draw_shape(Shape_t *s)
+{
+    if (s == NULL)
+        return -1;
+
+    switch (s->type)
+    {
+    case SHAPE_HORIZONTAL_LINE:
+        return draw_horizontal_line(s->shape.h_line.x1,
+                                    s->shape.h_line.x2,
+                                    s->shape.h_line.y,
+                                    s->shape.h_line.color);
+
+    case SHAPE_VERTICAL_LINE:
+        return draw_vertical_line(s->shape.v_line.x,
+                                  s->shape.v_line.y1,
+                                  s->shape.v_line.y2,
+                                  s->shape.v_line.color);
+
+    case SHAPE_LINE:
+        return draw_line(s->shape.line.x1, s->shape.line.y1,
+                         s->shape.line.x2, s->shape.line.y2,
+                         s->shape.line.color);
+
+    case SHAPE_RECTANGLE:
+        return draw_rectangle(s->shape.rectangle.x,
+                              s->shape.rectangle.y,
+                              s->shape.rectangle.width,
+                              s->shape.rectangle.height,
+                              s->shape.rectangle.color);
+
+    case SHAPE_FILLED_RECTANGLE:
+        return draw_filled_rectangle(s->shape.filled_rectangle.x,
+                                     s->shape.filled_rectangle.y,
+                                     s->shape.filled_rectangle.width,
+                                     s->shape.filled_rectangle.height,
+                                     s->shape.filled_rectangle.color);
+
+    case SHAPE_CIRCLE:
+        return draw_circle(s->shape.circle.x_center,
+                           s->shape.circle.y_center,
+                           s->shape.circle.radius,
+                           s->shape.circle.color);
+
+    case SHAPE_FILLED_CIRCLE:
+        return draw_filled_circle(s->shape.filled_circle.x_center,
+                                  s->shape.filled_circle.y_center,
+                                  s->shape.filled_circle.radius,
+                                  s->shape.filled_circle.color);
+
+    default:
+        return -1;
+    }
+}
 
 int8_t shape_deinit()
 {

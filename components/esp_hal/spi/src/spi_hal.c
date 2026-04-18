@@ -1,7 +1,7 @@
 #include "spi_hal.h"
 
 
-esp_err_t spi_bus_init(hal_spi_bus_handle_t *bus_handle, const hal_spi_bus_config_t *bus_config)
+esp_err_t spi_hal_bus_init(SpiHalBusHandle_t *bus_handle, const SpiHalBusConfig_t *bus_config)
 {
 
     spi_bus_config_t config = {
@@ -27,12 +27,12 @@ esp_err_t spi_bus_init(hal_spi_bus_handle_t *bus_handle, const hal_spi_bus_confi
     return ret;
 }
 
-esp_err_t spi_bus_deinit(hal_spi_bus_handle_t *bus_handle)
+esp_err_t spi_hal_bus_deinit(SpiHalBusHandle_t *bus_handle)
 {
     return spi_bus_free(bus_handle->host_id);
 }
 
-esp_err_t spi_add_device(hal_spi_bus_handle_t *bus_handle, const hal_spi_device_config_t *device_config, hal_spi_device_handle_t *device_handle)
+esp_err_t spi_hal_add_device(SpiHalBusHandle_t *bus_handle, const SpiHalDeviceConfig_t *device_config, SpiHalDeviceHandle_t *device_handle)
 {
     const spi_device_interface_config_t dev_config = {
         .mode = 0,
@@ -47,12 +47,12 @@ esp_err_t spi_add_device(hal_spi_bus_handle_t *bus_handle, const hal_spi_device_
     return ret;
 }
 
-esp_err_t spi_remove_device(hal_spi_device_handle_t *device_handle)
+esp_err_t spi_hal_remove_device(SpiHalDeviceHandle_t *device_handle)
 {
     return spi_bus_remove_device(device_handle->esp_handle);
 }
 
-esp_err_t spi_transfer(hal_spi_device_handle_t *device_handle, hal_spi_transaction_t *transaction)
+esp_err_t spi_hal_transfer(SpiHalDeviceHandle_t *device_handle, SpiHalTransaction_t *transaction)
 {
 
     if(device_handle==NULL){

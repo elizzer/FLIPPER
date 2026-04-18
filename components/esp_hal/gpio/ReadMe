@@ -1,0 +1,311 @@
+# GPIO HAL API Reference
+
+## Overview
+
+The GPIO HAL (Hardware Abstraction Layer) provides a portable interface for configuring and controlling GPIO pins. It supports pin direction, pull resistors, interrupt handling, and ISR registration.
+
+> **Note:** `gpio_hal_init()` must be called once before using any other GPIO HAL API.
+
+---
+
+## Table of Contents
+
+- [Data Types](#data-types)
+  - [gpioHalPull\_t](#gpioHalPull_t)
+  - [gpioHalMode\_t](#gpioHalMode_t)
+  - [gpioHalIntrType\_t](#gpioHalIntrType_t)
+  - [gpioHalLevel\_t](#gpioHalLevel_t)
+  - [gpioHalIsr\_fn](#gpioHalIsr_fn)
+  - [gpioHalPinConfig\_t](#gpioHalPinConfig_t)
+- [API Functions](#api-functions)
+  - [gpio\_hal\_init](#gpio_hal_init)
+  - [gpio\_hal\_config\_pin](#gpio_hal_config_pin)
+  - [gpio\_hal\_set\_level](#gpio_hal_set_level)
+  - [gpio\_hal\_get\_level](#gpio_hal_get_level)
+  - [gpio\_hal\_isr\_register](#gpio_hal_isr_register)
+  - [gpio\_hal\_isr\_deregister](#gpio_hal_isr_deregister)
+- [Usage Example](#usage-example)
+
+---
+
+## Data Types
+
+### `gpioHalPull_t`
+
+Pull resistor configuration for a GPIO pin.
+
+```c
+typedef enum
+{
+    GPIO_HAL_NOPULL,    // No pull resistor
+    GPIO_HAL_PULLUP,    // Internal pull-up resistor enabled
+    GPIO_HAL_PULLDOWN,  // Internal pull-down resistor enabled
+} gpioHalPull_t;
+```
+
+---
+
+### `gpioHalMode_t`
+
+Direction mode for a GPIO pin.
+
+```c
+typedef enum
+{
+    GPIO_HAL_INPUT,         // Pin configured as input only
+    GPIO_HAL_OUTPUT,        // Pin configured as output only
+    GPIO_HAL_INPUT_OUTPUT,  // Pin configured as both input and output
+} gpioHalMode_t;
+```
+
+---
+
+### `gpioHalIntrType_t`
+
+Interrupt trigger type for a GPIO pin.
+
+```c
+typedef enum
+{
+    GPIO_HAL_INTR_DISABLE,    // Interrupt disabled
+    GPIO_HAL_INTR_POSEDGE,    // Trigger on rising edge
+    GPIO_HAL_INTR_NEGEDGE,    // Trigger on falling edge
+    GPIO_HAL_INTR_ANYEDGE,    // Trigger on any edge (rising or falling)
+    GPIO_HAL_INTR_LOW_LEVEL,  // Trigger on low logic level
+    GPIO_HAL_INTR_HIGH_LEVEL, // Trigger on high logic level
+} gpioHalIntrType_t;
+```
+
+> Use `GPIO_HAL_INTR_DISABLE` in the pin config if interrupts are not needed for that pin.
+
+---
+
+### `gpioHalLevel_t`
+
+Logic level values for reading or writing a GPIO pin.
+
+```c
+typedef enum
+{
+    GPIO_HAL_LOW,   // Logic low (0)
+    GPIO_HAL_HIGH,  // Logic high (1)
+} gpioHalLevel_t;
+```
+
+---
+
+### `gpioHalIsr_fn`
+
+Function pointer type for GPIO interrupt service routines (ISR).
+
+```c
+typedef void (*gpioHalIsr_fn)(void *arg);
+```
+
+| Parameter | Type     | Description                                     |
+|-----------|----------|-------------------------------------------------|
+| `arg`     | `void *` | User-defined argument passed to the ISR callback |
+
+---
+
+### `gpioHalPinConfig_t`
+
+Configuration structure used to initialize a GPIO pin. Must be populated and passed to `gpio_hal_config_pin()`.
+
+```c
+typedef struct gpioHalPinConfig_s
+{
+    uint8_t           pin_num;    // IO number of the GPIO pin
+    gpioHalMode_t     mode;       // Pin direction (input / output / both)
+    gpioHalPull_t     pull;       // Pull resistor setting
+    gpioHalIntrType_t intr_type;  // Interrupt trigger type (use GPIO_HAL_INTR_DISABLE if unused)
+} gpioHalPinConfig_t;
+```
+
+| Field       | Type                | Description                                                      |
+|-------------|---------------------|------------------------------------------------------------------|
+| `pin_num`   | `uint8_t`           | IO number of the pin. Refer to `hw_include` for IONUM details.   |
+| `mode`      | `gpioHalMode_t`     | Sets the pin as input, output, or bidirectional.                 |
+| `pull`      | `gpioHalPull_t`     | Configures internal pull-up, pull-down, or no pull.              |
+| `intr_type` | `gpioHalIntrType_t` | Interrupt trigger type. Set to `GPIO_HAL_INTR_DISABLE` if unused.|
+
+---
+
+## API Functions
+
+### `gpio_hal_init`
+
+Initializes the GPIO HAL. Installs the GPIO ISR service, enabling subsequent ISR registration for individual pins.
+
+```c
+esp_err_t gpio_hal_init(void);
+```
+
+**Parameters:** None
+
+**Returns:**
+
+| Value      | Description           |
+|------------|-----------------------|
+| `ESP_OK`   | Initialization succeeded |
+| Other      | Initialization failed    |
+
+> ⚠️ **This function must be called once before any other GPIO HAL API.**
+
+---
+
+### `gpio_hal_config_pin`
+
+Configures a GPIO pin according to the provided pin configuration structure. Sets up the IO mux, pin direction, pull resistors, and interrupt type.
+
+```c
+esp_err_t gpio_hal_config_pin(const gpioHalPinConfig_t *pin_config);
+```
+
+**Parameters:**
+
+| Parameter    | Type                       | Description                              |
+|--------------|----------------------------|------------------------------------------|
+| `pin_config` | `const gpioHalPinConfig_t *` | Pointer to the pin configuration struct |
+
+**Returns:**
+
+| Value      | Description              |
+|------------|--------------------------|
+| `ESP_OK`   | Pin configured successfully |
+| Other      | Configuration failed        |
+
+---
+
+### `gpio_hal_set_level`
+
+Sets the output logic level of a GPIO pin.
+
+```c
+esp_err_t gpio_hal_set_level(uint8_t pin_num, uint8_t level);
+```
+
+**Parameters:**
+
+| Parameter | Type      | Description                                         |
+|-----------|-----------|-----------------------------------------------------|
+| `pin_num` | `uint8_t` | IO number of the GPIO pin to set                    |
+| `level`   | `uint8_t` | Desired logic level (`GPIO_HAL_LOW` or `GPIO_HAL_HIGH`) |
+
+**Returns:**
+
+| Value      | Description          |
+|------------|----------------------|
+| `ESP_OK`   | Level set successfully |
+| Other      | Operation failed       |
+
+---
+
+### `gpio_hal_get_level`
+
+Reads the current logic level of a GPIO pin.
+
+```c
+esp_err_t gpio_hal_get_level(uint8_t pin_num, uint8_t *level);
+```
+
+**Parameters:**
+
+| Parameter | Type       | Description                                              |
+|-----------|------------|----------------------------------------------------------|
+| `pin_num` | `uint8_t`  | IO number of the GPIO pin to read                        |
+| `level`   | `uint8_t *` | Pointer to a variable where the read level will be stored |
+
+**Returns:**
+
+| Value      | Description           |
+|------------|-----------------------|
+| `ESP_OK`   | Level read successfully |
+| Other      | Read operation failed   |
+
+---
+
+### `gpio_hal_isr_register`
+
+Registers an ISR callback function for a specific GPIO pin. The interrupt trigger type must be configured beforehand via `gpio_hal_config_pin()`.
+
+```c
+esp_err_t gpio_hal_isr_register(uint8_t pin_num, gpio_isr_t isr, void *arg);
+```
+
+**Parameters:**
+
+| Parameter | Type          | Description                                        |
+|-----------|---------------|----------------------------------------------------|
+| `pin_num` | `uint8_t`     | IO number of the GPIO pin                          |
+| `isr`     | `gpio_isr_t`  | ISR callback function (see `gpioHalIsr_fn`)        |
+| `arg`     | `void *`      | User-defined argument to pass to the ISR callback  |
+
+**Returns:**
+
+| Value      | Description                  |
+|------------|------------------------------|
+| `ESP_OK`   | ISR registered successfully  |
+| Other      | Registration failed          |
+
+> **Note:** `gpio_hal_init()` must be called before registering any ISR.
+
+---
+
+### `gpio_hal_isr_deregister`
+
+Unregisters a previously registered ISR callback for a GPIO pin.
+
+```c
+esp_err_t gpio_hal_isr_deregister(uint8_t pin_num);
+```
+
+**Parameters:**
+
+| Parameter | Type      | Description                       |
+|-----------|-----------|-----------------------------------|
+| `pin_num` | `uint8_t` | IO number of the GPIO pin         |
+
+**Returns:**
+
+| Value      | Description                    |
+|------------|--------------------------------|
+| `ESP_OK`   | ISR deregistered successfully  |
+| Other      | Deregistration failed          |
+
+---
+
+## Usage Example
+
+The following example configures a GPIO pin as an interrupt-driven input and registers an ISR callback.
+
+```c
+#include "gpio_hal.h"
+
+// ISR callback
+void button_isr_handler(void *arg)
+{
+    // Handle interrupt (e.g., set a flag, notify a task)
+}
+
+void app_main(void)
+{
+    // Step 1: Initialize the GPIO HAL (must be called first)
+    gpio_hal_init();
+
+    // Step 2: Configure the pin
+    gpioHalPinConfig_t btn_config = {
+        .pin_num   = 4,
+        .mode      = GPIO_HAL_INPUT,
+        .pull      = GPIO_HAL_PULLUP,
+        .intr_type = GPIO_HAL_INTR_NEGEDGE,
+    };
+    gpio_hal_config_pin(&btn_config);
+
+    // Step 3: Register the ISR
+    gpio_hal_isr_register(4, button_isr_handler, NULL);
+
+    // --- Later, to clean up ---
+    gpio_hal_isr_deregister(4);
+}
+```

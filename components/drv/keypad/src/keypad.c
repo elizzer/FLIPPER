@@ -4,20 +4,23 @@
 #include "PCF8574_IoExp.h"
 #include "event_manager.h"
 
-
 /* ─────────────────────────────────────────
  * Internal task parameter struct
  * kept private — not exposed in header
  * ───────────────────────────────────────── */
-typedef struct {
-    uint8_t          cid;
+typedef struct
+{
+    uint8_t cid;
     keypad_handle_t *handle;
 } keypad_task_params_t;
+
+SemaphoreHandle_t debounce_timer_mutex;
 
 /* ─────────────────────────────────────────
  * Forward declarations
  * ───────────────────────────────────────── */
 static void keypad_listen_task(void *pvParameters);
+void key_timer_cb(TimerHandle_t xTimer);
 
 /* ─────────────────────────────────────────
  * keypad_listen_task
@@ -25,8 +28,8 @@ static void keypad_listen_task(void *pvParameters);
 static void keypad_listen_task(void *pvParameters)
 {
     keypad_task_params_t *params = (keypad_task_params_t *)pvParameters;
-    keypad_handle_t      *handle = params->handle;
-    uint8_t               cid    = params->cid;
+    keypad_handle_t *handle = params->handle;
+    uint8_t cid = params->cid;
 
     /* params was malloc'd in init — free it now
      * we have extracted what we need                */
@@ -35,12 +38,12 @@ static void keypad_listen_task(void *pvParameters)
     uint8_t buf_size = (handle->config.buttons / 8) + 1;
 
     printf("\nKeypad_listen_task started...");
-    printf("\nKeypad_listen_task CID %d",cid);
+    printf("\nKeypad_listen_task CID %d", cid);
 
     while (1)
     {
-        wait_semaphore(EVENT_TYPE_IO_EXP, cid);
-        printf("\nIO EXP event trigreed");
+        EventDescription_t ev_desc;
+        event_manager_wait_event(EVENT_TYPE_IO_EXP, cid, &ev_desc);
         /* read current port state from io expander */
         for (uint8_t port = 0; port < buf_size; port++)
         {
@@ -64,16 +67,45 @@ static void keypad_listen_task(void *pvParameters)
 
                     if (key_index >= handle->config.buttons)
                         break;
-
                     uint8_t new_state = (handle->cur_raw[port] >> i) & 0x01;
 
                     /* update raw state for this key */
-                    handle->keys[key_index].raw_state =
-                        (new_state == 0) ? KEY_PRESSED : KEY_RELEASED;
+                    handle->keys[key_index].raw_state = (new_state == 0) ? SW_DOWN : SW_UP;
 
-                    printf("Key %d changed to %s\n",
-                           handle->keys[key_index].key_id,
-                           (new_state == 0) ? "PRESSED" : "RELEASED");
+                    // start debounce timer
+                    // check the timer state
+                    if (handle->keys[key_index].timer_state == IDEL)
+                    {
+                        handle->keys[key_index].timer_state = DEBOUNCE_TIMER;
+                        // printf("\nStarting debounce timer for key %d\n", handle->keys[key_index].key_id);
+                        handle->keys[key_index].timer = xTimerCreate("DebounceTimer", pdMS_TO_TICKS(20), pdFALSE, (void *)&handle->keys[key_index], key_timer_cb);
+                        xTimerStart(handle->keys[key_index].timer, 0);
+                    }
+                    else if (handle->keys[key_index].timer_state == DEBOUNCE_TIMER)
+                    {
+                        // if the timer is already running, reset it
+                        // printf("\nResetting debounce timer for key %d\n", handle->keys[key_index].key_id);
+                        xTimerReset(handle->keys[key_index].timer, 0);
+                    }
+                    else if (handle->keys[key_index].timer_state == LONG_PRESS_TIMER)
+                    {
+                        // if the long press timer is running, stop it and start debounce timer
+                        // printf("\nStopping long press timer for key %d\n", handle->keys[key_index].key_id);
+                        xTimerStop(handle->keys[key_index].timer, 0);
+                        handle->keys[key_index].timer_state = DEBOUNCE_TIMER;
+                        xTimerChangePeriod(handle->keys[key_index].timer, pdMS_TO_TICKS(20), 0);
+                        xTimerStart(handle->keys[key_index].timer, 0);
+                    }
+
+                    // EventDescription_t ev_desc = {
+                    //     .event_source = 2,
+                    //     .event_type = EVENT_TYPE_KEYPAD,
+                    //     .keypad = {
+                    //         .action = (new_state == 0) ? KEYPAD_PRESSED : KEY_RELEASED,
+                    //         .key_number = handle->keys[key_index].key_id,
+                    //     },
+                    // };
+                    // event_manager_post_event(ev_desc.event_type, ev_desc);
 
                     /* TODO — feed into debounce timer here */
                 }
@@ -82,6 +114,64 @@ static void keypad_listen_task(void *pvParameters)
             /* update prev for next comparison */
             handle->prev_raw[port] = handle->cur_raw[port];
         }
+    }
+}
+
+void post_key_event(uint8_t key_id, keypad_action_t action)
+{
+    EventDescription_t ev_desc = {
+        .event_source = 2,
+        .event_type = EVENT_TYPE_KEYPAD,
+        .keypad = {
+            .action = action,
+            .key_number = key_id,
+        },
+    };
+    event_manager_post_event(ev_desc.event_type, ev_desc);
+}
+
+void key_timer_cb(TimerHandle_t xTimer)
+{
+    /* TODO — implement debounce timer callback */
+    // get the key index from timer ID
+    // last raw state is the debounced state
+
+    // get the key from the key index
+    keypad_button_attrs_t *key = (keypad_button_attrs_t *)pvTimerGetTimerID(xTimer);
+    switch (key->timer_state)
+    {
+    case DEBOUNCE_TIMER:
+        // means the debounce timer is expired and the switch is stable
+        if (key->raw_state == SW_DOWN)
+        {
+            key->stable_state = KEY_PRESSED;
+            // start long press timer
+            key->timer_state = LONG_PRESS_TIMER;
+            xTimerChangePeriod(key->timer, pdMS_TO_TICKS(1000), 0);
+            xTimerStart(key->timer, 0);
+            post_key_event(key->key_id, KEYPAD_PRESSED);
+        }
+        else
+        {
+            key->stable_state = KEY_RELEASED;
+            post_key_event(key->key_id, KEYPAD_RELEASED);
+            // stopr all timer and reset timer state to idle
+            xTimerStop(key->timer, 0);
+            key->timer_state = IDEL;
+            // no need to start long press timer since the key is released
+        }
+        break;
+    case LONG_PRESS_TIMER:
+        // means the long press timer is expired and the key is still down, so it's a long press
+        if (key->stable_state == KEY_PRESSED)
+        {
+            post_key_event(key->key_id, KEYPAD_LONG_PRESS);
+            xTimerStop(key->timer, 0); // stop timer after firing
+            key->timer_state = IDEL;   // reset state
+        }
+
+    default:
+        break;
     }
 }
 
@@ -107,7 +197,7 @@ int8_t keypad_init(keypad_config_t *config, keypad_handle_t *handle)
 
     /* allocate per key state array */
     handle->keys = (keypad_button_attrs_t *)malloc(
-                       sizeof(keypad_button_attrs_t) * config->buttons);
+        sizeof(keypad_button_attrs_t) * config->buttons);
     if (handle->keys == NULL)
     {
         printf("\nkeypad_init: keys malloc failed");
@@ -117,18 +207,21 @@ int8_t keypad_init(keypad_config_t *config, keypad_handle_t *handle)
     /* initialise each key */
     for (uint8_t i = 0; i < config->buttons; i++)
     {
-        handle->keys[i].key_id       = i;
+        handle->keys[i].key_id = i;
         handle->keys[i].stable_state = KEY_RELEASED;
-        handle->keys[i].raw_state    = KEY_RELEASED;
-        handle->keys[i].timer_state  = KEY_TIMER_NONE;
-        handle->keys[i].timer        = NULL;
+        handle->keys[i].raw_state = KEY_RELEASED;
+        handle->keys[i].gesture_state = KEY_GESTURE_NONE;
+        handle->keys[i].timer = NULL;
+        handle->keys[i].timer_state = IDEL;
+        // handle->keys[i].long_press_tmr = NULL;
+        // handle->keys[i].double_click_tmr = NULL;
     }
 
     /* allocate raw port buffers */
     uint8_t buf_size = (config->buttons / 8) + 1;
 
     handle->prev_raw = (uint8_t *)malloc(buf_size);
-    handle->cur_raw  = (uint8_t *)malloc(buf_size);
+    handle->cur_raw = (uint8_t *)malloc(buf_size);
 
     if (handle->prev_raw == NULL || handle->cur_raw == NULL)
     {
@@ -140,24 +233,24 @@ int8_t keypad_init(keypad_config_t *config, keypad_handle_t *handle)
 
     /* all pins high = all keys released (active low) */
     memset(handle->prev_raw, 0xFF, buf_size);
-    memset(handle->cur_raw,  0xFF, buf_size);
+    memset(handle->cur_raw, 0xFF, buf_size);
 
     /* register for io exp event */
-    if (register_event(EVENT_TYPE_IO_EXP, &handle->consumer_id) != 0)
+    if (event_manager_register_event(EVENT_TYPE_IO_EXP, &handle->consumer_id) != 0)
     {
         printf("\nkeypad_init: event registration failed");
         free(handle->keys);
         free(handle->prev_raw);
         free(handle->cur_raw);
-        handle->keys     = NULL;
+        handle->keys = NULL;
         handle->prev_raw = NULL;
-        handle->cur_raw  = NULL;
+        handle->cur_raw = NULL;
         return -5;
     }
 
     /* pack task parameters */
     keypad_task_params_t *params = (keypad_task_params_t *)malloc(
-                                       sizeof(keypad_task_params_t));
+        sizeof(keypad_task_params_t));
     if (params == NULL)
     {
         printf("\nkeypad_init: params malloc failed");
@@ -167,7 +260,7 @@ int8_t keypad_init(keypad_config_t *config, keypad_handle_t *handle)
         return -6;
     }
 
-    params->cid    = handle->consumer_id;
+    params->cid = handle->consumer_id;
     params->handle = handle;
 
     /* create listener task */
@@ -177,8 +270,7 @@ int8_t keypad_init(keypad_config_t *config, keypad_handle_t *handle)
         2048,
         (void *)params,
         5,
-        &handle->task_handle
-    );
+        &handle->task_handle);
 
     if (ret != pdPASS)
     {
@@ -187,9 +279,9 @@ int8_t keypad_init(keypad_config_t *config, keypad_handle_t *handle)
         free(handle->keys);
         free(handle->prev_raw);
         free(handle->cur_raw);
-        handle->keys     = NULL;
+        handle->keys = NULL;
         handle->prev_raw = NULL;
-        handle->cur_raw  = NULL;
+        handle->cur_raw = NULL;
         return -7;
     }
 
@@ -226,16 +318,16 @@ int8_t keypad_deinit(keypad_handle_t *handle)
     }
 
     /* unregister from event manager */
-    unregister_event(EVENT_TYPE_IO_EXP, handle->consumer_id);
+    event_manager_unregister_event(EVENT_TYPE_IO_EXP, handle->consumer_id);
 
     /* free all allocations */
     free(handle->keys);
     free(handle->prev_raw);
     free(handle->cur_raw);
 
-    handle->keys     = NULL;
+    handle->keys = NULL;
     handle->prev_raw = NULL;
-    handle->cur_raw  = NULL;
+    handle->cur_raw = NULL;
 
     printf("\nkeypad_deinit: success");
     return 0;

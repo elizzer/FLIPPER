@@ -13,14 +13,14 @@ void IoExp_test()
 {
 
     // Create i2c bus
-    const i2c_hal_config_t i2c_bus_config = {
+    const I2cHalConfig_t i2c_bus_config = {
         .clk_speed_hz = I2C_CLK_SRC_DEFAULT,
         .scl_io_num = GPIO_NUM_22,
         .sda_io_num = GPIO_NUM_21,
         .i2c_instance = I2C_NUM_0,
     };
 
-    static i2c_hal_bus_handle_t i2c_bus_handle;
+    static I2cHalBusHandle_t i2c_bus_handle;
 
     i2c_hal_init(&i2c_bus_config, &i2c_bus_handle);
 
@@ -37,13 +37,13 @@ void IoExp_test()
     }
     printf("\nI2C bus scanning complete");
 
-    const i2c_hal_device_config_t io_exp_i2c_dev_config = {
+    const I2cHalDeviceConfig_t io_exp_i2c_dev_config = {
         .addr_len = I2C_HAL_ADDR_BIT_LEN_7,
         .clk_freq_hz = 100000,
         .device_address = 32,
     };
 
-    static i2c_hal_device_handle_t io_exp_i2c_dev_handle;
+    static I2cHalDeviceHandle_t io_exp_i2c_dev_handle;
 
     i2c_hal_add_device(&io_exp_i2c_dev_config, &io_exp_i2c_dev_handle, &i2c_bus_handle);
     printf("\nAdded i2c device");
@@ -70,5 +70,8 @@ void IoExp_test()
     static keypad_handle_t keypad_handle; 
 
     keypad_init(&keypad_config,&keypad_handle);
+    uint8_t cid=0xFF;
+    event_manager_register_event(EVENT_TYPE_KEYPAD,&cid);
+    while()
 
 }

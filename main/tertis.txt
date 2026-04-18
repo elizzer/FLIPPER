@@ -1,0 +1,609 @@
+#include <stdio.h>
+#include <string.h>
+
+#include "spi_hal.h"
+#include "event_manager.h"
+#include "gpio_hal.h"
+#include "shapes.h"
+#include "display_manager.h"
+
+// ── Display ───────────────────────────────────────────────────
+#define DISPLAY_WIDTH       240
+#define DISPLAY_HEIGHT      320
+
+// ── Grid Config ───────────────────────────────────────────────
+#define CELL_SIZE           14
+#define CELL_GAP            1
+#define CELL_STEP           (CELL_SIZE + CELL_GAP)
+
+#define GRID_COLS           10
+#define GRID_ROWS           20
+#define GRID_START_X        5
+#define GRID_START_Y        20
+
+// Side panel (score/next piece) starts after grid
+#define PANEL_X             (GRID_START_X + GRID_COLS * CELL_STEP + 6)
+#define PANEL_W             (DISPLAY_WIDTH - PANEL_X - 4)
+
+// ── Colors ────────────────────────────────────────────────────
+#define COLOR_BACKGROUND    0x0000
+#define COLOR_BORDER        0x4208
+#define COLOR_SCORE_BG      0x2104
+#define COLOR_TEXT          0xFFFF
+#define COLOR_GHOST         0x2104  // ghost piece
+
+// Tetromino colors (RGB565)
+#define COLOR_I             0x07FF  // cyan
+#define COLOR_O             0xFFE0  // yellow
+#define COLOR_T             0x801F  // purple
+#define COLOR_S             0x07E0  // green
+#define COLOR_Z             0xF800  // red
+#define COLOR_J             0x001F  // blue
+#define COLOR_L             0xFC00  // orange
+
+// ── Tetromino Definitions ─────────────────────────────────────
+// Each piece: 4 rotations, each rotation: 4 (row,col) offsets
+// relative to pivot
+
+#define NUM_PIECES      7
+#define NUM_ROTATIONS   4
+#define NUM_CELLS       4
+
+typedef struct {
+    int8_t row;
+    int8_t col;
+} Offset_t;
+
+// [piece][rotation][cell]
+static const Offset_t PIECES[NUM_PIECES][NUM_ROTATIONS][NUM_CELLS] = {
+    // I
+    {
+        {{ 0,-1},{ 0, 0},{ 0, 1},{ 0, 2}},
+        {{-1, 0},{ 0, 0},{ 1, 0},{ 2, 0}},
+        {{ 0,-1},{ 0, 0},{ 0, 1},{ 0, 2}},
+        {{-1, 0},{ 0, 0},{ 1, 0},{ 2, 0}},
+    },
+    // O
+    {
+        {{ 0, 0},{ 0, 1},{ 1, 0},{ 1, 1}},
+        {{ 0, 0},{ 0, 1},{ 1, 0},{ 1, 1}},
+        {{ 0, 0},{ 0, 1},{ 1, 0},{ 1, 1}},
+        {{ 0, 0},{ 0, 1},{ 1, 0},{ 1, 1}},
+    },
+    // T
+    {
+        {{ 0,-1},{ 0, 0},{ 0, 1},{-1, 0}},
+        {{-1, 0},{ 0, 0},{ 1, 0},{ 0, 1}},
+        {{ 0,-1},{ 0, 0},{ 0, 1},{ 1, 0}},
+        {{-1, 0},{ 0, 0},{ 1, 0},{ 0,-1}},
+    },
+    // S
+    {
+        {{ 0, 0},{ 0, 1},{-1,-1},{-1, 0}},
+        {{-1, 0},{ 0, 0},{ 0, 1},{ 1, 1}},
+        {{ 0, 0},{ 0, 1},{-1,-1},{-1, 0}},
+        {{-1, 0},{ 0, 0},{ 0, 1},{ 1, 1}},
+    },
+    // Z
+    {
+        {{-1, 0},{-1, 1},{ 0,-1},{ 0, 0}},
+        {{ 0, 0},{ 1, 0},{-1,-1},{ 0,-1}},
+        {{-1, 0},{-1, 1},{ 0,-1},{ 0, 0}},
+        {{ 0, 0},{ 1, 0},{-1,-1},{ 0,-1}},
+    },
+    // J
+    {
+        {{ 0,-1},{ 0, 0},{ 0, 1},{-1,-1}},
+        {{-1, 0},{ 0, 0},{ 1, 0},{-1, 1}},
+        {{ 0,-1},{ 0, 0},{ 0, 1},{ 1, 1}},
+        {{-1, 0},{ 0, 0},{ 1, 0},{ 1,-1}},
+    },
+    // L
+    {
+        {{ 0,-1},{ 0, 0},{ 0, 1},{-1, 1}},
+        {{-1, 0},{ 0, 0},{ 1, 0},{ 1, 1}},
+        {{ 0,-1},{ 0, 0},{ 0, 1},{ 1,-1}},
+        {{-1, 0},{ 0, 0},{ 1, 0},{-1,-1}},
+    },
+};
+
+static const uint16_t PIECE_COLORS[NUM_PIECES] = {
+    COLOR_I, COLOR_O, COLOR_T, COLOR_S, COLOR_Z, COLOR_J, COLOR_L
+};
+
+// ── Game State ────────────────────────────────────────────────
+typedef enum {
+    GAME_RUNNING,
+    GAME_OVER,
+} GameState_t;
+
+// Board: 0 = empty, 1-7 = piece type+1
+static uint8_t  board[GRID_ROWS][GRID_COLS];
+static GameState_t game_state;
+static uint32_t score;
+static uint32_t high_score = 0;
+static uint16_t lines_cleared;
+static uint8_t  level;
+
+// Current piece
+static int8_t   cur_piece;
+static int8_t   cur_rot;
+static int8_t   cur_row;
+static int8_t   cur_col;
+
+// Next piece
+static int8_t   next_piece;
+
+extern int8_t hardware_init();
+extern displayHandle_t *get_display_handle();
+static displayHandle_t *display_handle;
+
+// ─────────────────────────────────────────────────────────────
+// Pixel wrapper
+// ─────────────────────────────────────────────────────────────
+
+void draw_pixel_wrapper(uint16_t x, uint16_t y, uint16_t color)
+{
+    display_drawPixel(display_handle, x, y, color);
+}
+
+// ─────────────────────────────────────────────────────────────
+// RNG
+// ─────────────────────────────────────────────────────────────
+
+static uint16_t rng_state = 0xACE1;
+
+static uint16_t rng_next(void)
+{
+    rng_state ^= rng_state << 7;
+    rng_state ^= rng_state >> 9;
+    rng_state ^= rng_state << 8;
+    return rng_state;
+}
+
+static uint8_t random_piece(void)
+{
+    return rng_next() % NUM_PIECES;
+}
+
+// ─────────────────────────────────────────────────────────────
+// Draw helpers
+// ─────────────────────────────────────────────────────────────
+
+static void draw_cell(int row, int col, uint16_t color)
+{
+    int x = GRID_START_X + col * CELL_STEP;
+    int y = GRID_START_Y + row * CELL_STEP;
+    draw_filled_rectangle(x, y, CELL_SIZE, CELL_SIZE, color);
+}
+
+static void draw_cell_outline(int row, int col, uint16_t color)
+{
+    int x = GRID_START_X + col * CELL_STEP;
+    int y = GRID_START_Y + row * CELL_STEP;
+    draw_rectangle(x, y, CELL_SIZE, CELL_SIZE, color);
+}
+
+// ─────────────────────────────────────────────────────────────
+// Piece helpers
+// ─────────────────────────────────────────────────────────────
+
+// Get absolute cell positions of current piece
+static void get_cells(int8_t piece, int8_t rot, int8_t row, int8_t col,
+                      int8_t out_rows[NUM_CELLS], int8_t out_cols[NUM_CELLS])
+{
+    for (int i = 0; i < NUM_CELLS; i++) {
+        out_rows[i] = row + PIECES[piece][rot][i].row;
+        out_cols[i] = col + PIECES[piece][rot][i].col;
+    }
+}
+
+// Check if position is valid (no wall/floor/board collision)
+static uint8_t is_valid(int8_t piece, int8_t rot, int8_t row, int8_t col)
+{
+    int8_t rs[NUM_CELLS], cs[NUM_CELLS];
+    get_cells(piece, rot, row, col, rs, cs);
+
+    for (int i = 0; i < NUM_CELLS; i++) {
+        if (cs[i] < 0 || cs[i] >= GRID_COLS) return 0;
+        if (rs[i] >= GRID_ROWS)               return 0;
+        if (rs[i] >= 0 && board[rs[i]][cs[i]]) return 0;
+    }
+    return 1;
+}
+
+// Find ghost piece row (where piece would land)
+static int8_t get_ghost_row(void)
+{
+    int8_t ghost = cur_row;
+    while (is_valid(cur_piece, cur_rot, ghost + 1, cur_col))
+        ghost++;
+    return ghost;
+}
+
+// ─────────────────────────────────────────────────────────────
+// Score panel
+// ─────────────────────────────────────────────────────────────
+
+// Draw a number as stacked small boxes (no font needed)
+// value displayed as filled boxes, max 99
+static void draw_number_boxes(int x, int y, uint32_t value, uint16_t color)
+{
+    int box  = 6;
+    int gap  = 2;
+    int cols = 5;
+    uint32_t display_val = value > 25 ? 25 : value;
+
+    for (uint32_t i = 0; i < display_val; i++) {
+        int bx = x + (i % cols) * (box + gap);
+        int by = y + (i / cols) * (box + gap);
+        draw_filled_rectangle(bx, by, box, box, color);
+    }
+}
+
+static void draw_next_piece(void)
+{
+    // Clear next piece area
+    draw_filled_rectangle(PANEL_X, 80, PANEL_W, 60, COLOR_BACKGROUND);
+
+    // Draw label row (4 small boxes as "NEXT" indicator)
+    draw_filled_rectangle(PANEL_X,     74, 10, 4, COLOR_TEXT);
+    draw_filled_rectangle(PANEL_X + 13,74, 10, 4, COLOR_TEXT);
+
+    // Draw next piece centered in panel
+    uint16_t color = PIECE_COLORS[next_piece];
+    int8_t rs[NUM_CELLS], cs[NUM_CELLS];
+    get_cells(next_piece, 0, 0, 0, rs, cs);
+
+    // Find bounding box to center
+    int8_t min_r = rs[0], max_r = rs[0];
+    int8_t min_c = cs[0], max_c = cs[0];
+    for (int i = 1; i < NUM_CELLS; i++) {
+        if (rs[i] < min_r) min_r = rs[i];
+        if (rs[i] > max_r) max_r = rs[i];
+        if (cs[i] < min_c) min_c = cs[i];
+        if (cs[i] > max_c) max_c = cs[i];
+    }
+
+    int piece_w = (max_c - min_c + 1) * CELL_STEP;
+    int piece_h = (max_r - min_r + 1) * CELL_STEP;
+    int px = PANEL_X + (PANEL_W - piece_w) / 2;
+    int py = 88 + (40 - piece_h) / 2;
+
+    for (int i = 0; i < NUM_CELLS; i++) {
+        int x = px + (cs[i] - min_c) * CELL_STEP;
+        int y = py + (rs[i] - min_r) * CELL_STEP;
+        draw_filled_rectangle(x, y, CELL_SIZE, CELL_SIZE, color);
+    }
+}
+
+static void draw_panel(void)
+{
+    // Panel background
+    draw_filled_rectangle(PANEL_X, 0, PANEL_W, DISPLAY_HEIGHT, COLOR_SCORE_BG);
+
+    // Level indicator boxes
+    draw_filled_rectangle(PANEL_X, 4, PANEL_W, 4, COLOR_BORDER);
+
+    // Score boxes
+    draw_number_boxes(PANEL_X + 4, 12, score,        COLOR_S);
+
+    // Divider
+    draw_filled_rectangle(PANEL_X, 68, PANEL_W, 2, COLOR_BORDER);
+
+    // Next piece
+    draw_next_piece();
+
+    // Divider
+    draw_filled_rectangle(PANEL_X, 148, PANEL_W, 2, COLOR_BORDER);
+
+    // Lines cleared boxes
+    draw_number_boxes(PANEL_X + 4, 155, lines_cleared, 0xFFE0);
+
+    // Divider
+    draw_filled_rectangle(PANEL_X, 228, PANEL_W, 2, COLOR_BORDER);
+
+    // Level boxes
+    draw_number_boxes(PANEL_X + 4, 235, level, 0xFC00);
+}
+
+// ─────────────────────────────────────────────────────────────
+// Draw board
+// ─────────────────────────────────────────────────────────────
+
+static void draw_board_cells(void)
+{
+    for (int r = 0; r < GRID_ROWS; r++) {
+        for (int c = 0; c < GRID_COLS; c++) {
+            if (board[r][c]) {
+                draw_cell(r, c, PIECE_COLORS[board[r][c] - 1]);
+            } else {
+                draw_cell(r, c, COLOR_BACKGROUND);
+            }
+        }
+    }
+}
+
+static void draw_current_piece(void)
+{
+    int8_t rs[NUM_CELLS], cs[NUM_CELLS];
+
+    // Ghost piece
+    int8_t ghost_row = get_ghost_row();
+    if (ghost_row != cur_row) {
+        get_cells(cur_piece, cur_rot, ghost_row, cur_col, rs, cs);
+        for (int i = 0; i < NUM_CELLS; i++)
+            if (rs[i] >= 0)
+                draw_cell_outline(rs[i], cs[i], PIECE_COLORS[cur_piece]);
+    }
+
+    // Actual piece
+    get_cells(cur_piece, cur_rot, cur_row, cur_col, rs, cs);
+    for (int i = 0; i < NUM_CELLS; i++)
+        if (rs[i] >= 0)
+            draw_cell(rs[i], cs[i], PIECE_COLORS[cur_piece]);
+}
+
+static void draw_border(void)
+{
+    // Left border
+    draw_vertical_line(GRID_START_X - 2,
+                       GRID_START_Y,
+                       GRID_START_Y + GRID_ROWS * CELL_STEP,
+                       COLOR_BORDER);
+    // Right border
+    draw_vertical_line(GRID_START_X + GRID_COLS * CELL_STEP + 1,
+                       GRID_START_Y,
+                       GRID_START_Y + GRID_ROWS * CELL_STEP,
+                       COLOR_BORDER);
+    // Bottom border
+    draw_horizontal_line(GRID_START_X - 2,
+                         GRID_START_X + GRID_COLS * CELL_STEP + 1,
+                         GRID_START_Y + GRID_ROWS * CELL_STEP + 1,
+                         COLOR_BORDER);
+}
+
+static void render(void)
+{
+    display_clearBuffer(display_handle);
+    draw_board_cells();
+    draw_current_piece();
+    draw_border();
+    draw_panel();
+    display_writeBuffer(display_handle);
+}
+
+// ─────────────────────────────────────────────────────────────
+// Line clearing
+// ─────────────────────────────────────────────────────────────
+
+static uint8_t check_and_clear_lines(void)
+{
+    uint8_t cleared = 0;
+
+    for (int r = GRID_ROWS - 1; r >= 0; r--) {
+        uint8_t full = 1;
+        for (int c = 0; c < GRID_COLS; c++) {
+            if (!board[r][c]) { full = 0; break; }
+        }
+
+        if (full) {
+            // Shift everything above down
+            for (int rr = r; rr > 0; rr--)
+                memcpy(board[rr], board[rr - 1], GRID_COLS);
+            memset(board[0], 0, GRID_COLS);
+            cleared++;
+            r++; // re-check same row
+        }
+    }
+
+    return cleared;
+}
+
+// ─────────────────────────────────────────────────────────────
+// Scoring (classic Tetris points)
+// ─────────────────────────────────────────────────────────────
+
+static void add_score(uint8_t cleared)
+{
+    static const uint16_t points[5] = { 0, 40, 100, 300, 1200 };
+    if (cleared > 4) cleared = 4;
+    score += points[cleared] * (level + 1);
+    lines_cleared += cleared;
+    level = lines_cleared / 10;
+}
+
+// ─────────────────────────────────────────────────────────────
+// Lock piece to board
+// ─────────────────────────────────────────────────────────────
+
+static void lock_piece(void)
+{
+    int8_t rs[NUM_CELLS], cs[NUM_CELLS];
+    get_cells(cur_piece, cur_rot, cur_row, cur_col, rs, cs);
+
+    for (int i = 0; i < NUM_CELLS; i++) {
+        if (rs[i] < 0) {
+            // Piece locked above board — game over
+            if (score > high_score) high_score = score;
+            game_state = GAME_OVER;
+            return;
+        }
+        board[rs[i]][cs[i]] = cur_piece + 1;
+    }
+
+    uint8_t cleared = check_and_clear_lines();
+    if (cleared) add_score(cleared);
+}
+
+// ─────────────────────────────────────────────────────────────
+// Spawn new piece
+// ─────────────────────────────────────────────────────────────
+
+static void spawn_piece(void)
+{
+    cur_piece = next_piece;
+    next_piece = random_piece();
+    cur_rot   = 0;
+    cur_row   = 1;
+    cur_col   = GRID_COLS / 2;
+
+    if (!is_valid(cur_piece, cur_rot, cur_row, cur_col)) {
+        if (score > high_score) high_score = score;
+        game_state = GAME_OVER;
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Game init
+// ─────────────────────────────────────────────────────────────
+
+static void game_init(void)
+{
+    memset(board, 0, sizeof(board));
+    game_state    = GAME_RUNNING;
+    score         = 0;
+    lines_cleared = 0;
+    level         = 0;
+
+    next_piece = random_piece();
+    spawn_piece();
+}
+
+// ─────────────────────────────────────────────────────────────
+// Game over screen
+// ─────────────────────────────────────────────────────────────
+
+static void draw_game_over(void)
+{
+    display_clearBuffer(display_handle);
+
+    draw_filled_rectangle(0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT, 0xF800);
+
+    // Score boxes
+    int box = 12, gap = 3, per_row = 10;
+    int gw  = per_row * (box + gap);
+    int sx  = (DISPLAY_WIDTH - gw) / 2;
+
+    uint32_t show = score > 50 ? 50 : score;
+    for (uint32_t i = 0; i < show; i++) {
+        int x = sx + (i % per_row) * (box + gap);
+        int y = 150 + (i / per_row) * (box + gap);
+        draw_filled_rectangle(x, y, box, box, COLOR_S);
+    }
+
+    // Restart bar
+    draw_filled_rectangle(70, 295, 100, 6, COLOR_S);
+
+    display_writeBuffer(display_handle);
+
+    printf("\n============================");
+    printf("\n        GAME OVER");
+    printf("\n  Score      : %lu", score);
+    printf("\n  High Score : %lu", high_score);
+    printf("\n  Lines      : %d",  lines_cleared);
+    printf("\n  Level      : %d",  level);
+    printf("\n============================");
+}
+
+// ─────────────────────────────────────────────────────────────
+// Gravity — called on key 2 (or any "tick" key)
+// drops piece one row, locks if it can't
+// ─────────────────────────────────────────────────────────────
+
+static void gravity(void)
+{
+    if (is_valid(cur_piece, cur_rot, cur_row + 1, cur_col)) {
+        cur_row++;
+    } else {
+        lock_piece();
+        if (game_state == GAME_RUNNING)
+            spawn_piece();
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Hard drop — instant land
+// ─────────────────────────────────────────────────────────────
+
+static void hard_drop(void)
+{
+    cur_row = get_ghost_row();
+    lock_piece();
+    if (game_state == GAME_RUNNING)
+        spawn_piece();
+}
+
+// ─────────────────────────────────────────────────────────────
+// app_main
+// ─────────────────────────────────────────────────────────────
+
+void app_main(void)
+{
+    event_manager_init();
+    hardware_init();
+    display_handle = get_display_handle();
+
+    uint8_t keypad_cid = 0xff;
+    event_manager_register_event(EVENT_TYPE_KEYPAD, &keypad_cid);
+
+    EventDescription_t keypad_desc;
+    shape_init(draw_pixel_wrapper);
+
+    game_init();
+    render();
+
+    while (1)
+    {
+        event_manager_wait_event(EVENT_TYPE_KEYPAD, keypad_cid, &keypad_desc);
+
+        if (keypad_desc.keypad.action == KEYPAD_PRESSED)
+        {
+            if (game_state == GAME_OVER) {
+                game_init();
+                render();
+                continue;
+            }
+
+            switch (keypad_desc.keypad.key_number)
+            {
+            case 1: // UP → rotate
+            {
+                int8_t new_rot = (cur_rot + 1) % NUM_ROTATIONS;
+                // Wall kick — try current col, then nudge right, then left
+                if      (is_valid(cur_piece, new_rot, cur_row, cur_col))     cur_rot = new_rot;
+                else if (is_valid(cur_piece, new_rot, cur_row, cur_col + 1)) { cur_col++; cur_rot = new_rot; }
+                else if (is_valid(cur_piece, new_rot, cur_row, cur_col - 1)) { cur_col--; cur_rot = new_rot; }
+                break;
+            }
+
+            case 3: // DOWN → soft drop (gravity step)
+                gravity();
+                break;
+
+            case 0: // LEFT
+                if (is_valid(cur_piece, cur_rot, cur_row, cur_col - 1))
+                    cur_col--;
+                break;
+
+            case 4: // RIGHT
+                if (is_valid(cur_piece, cur_rot, cur_row, cur_col + 1))
+                    cur_col++;
+                break;
+
+            case 2: // CENTRE → hard drop
+                hard_drop();
+                break;
+
+            default:
+                break;
+            }
+
+            if (game_state == GAME_OVER) {
+                draw_game_over();
+            } else {
+                render();
+            }
+        }
+    }
+}

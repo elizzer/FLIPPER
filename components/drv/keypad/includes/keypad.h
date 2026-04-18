@@ -14,17 +14,26 @@
 typedef enum {
     KEY_PRESSED,
     KEY_RELEASED,
+    SW_DOWN,   // intermediate state when key is physically down but not yet debounced
+    SW_UP,     // intermediate state when key is physically up but not yet debounced
 } key_state_t;
+
+typedef enum{
+    IDEL,
+    DEBOUNCE_TIMER,
+    LONG_PRESS_TIMER,
+    DOUBLE_CLICK_TIMER,
+} KeyTimerState_t; 
 
 /* ─────────────────────────────────────────
  * Active timer type on a key
  * ───────────────────────────────────────── */
 typedef enum {
-    KEY_TIMER_NONE,
-    KEY_TIMER_DEBOUNCE,
-    KEY_TIMER_DOUBLE_PRESS,
-    KEY_TIMER_LONG_PRESS,
-} key_timer_state_t;
+    KEY_GESTURE_NONE,
+    KEY_GESTURE_PRESS,
+    KEY_GESTURE_LONG_PRESS,
+    KEY_GESTURE_DOUBLE_CLICK,
+} KeyGestureState_t;
 
 /* ─────────────────────────────────────────
  * Per key runtime state — internal use only
@@ -34,8 +43,10 @@ typedef struct {
     uint8_t           key_id;
     key_state_t       stable_state;      // last confirmed debounced state
     key_state_t       raw_state;         // latest raw reading
-    key_timer_state_t timer_state;       // which timer is currently active
+    KeyGestureState_t gesture_state;       // which timer is currently active
     TimerHandle_t     timer;             // FreeRTOS software timer handle
+    KeyTimerState_t   timer_state;       // state of the timer (IDLE, DEBOUNCE, LONG_PRESS, DOUBLE_CLICK)
+
 } keypad_button_attrs_t;
 
 /* ─────────────────────────────────────────

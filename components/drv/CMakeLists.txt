@@ -3,10 +3,12 @@ idf_component_register(
 	"ILI9341/src/ILI9341.c"
 	"PCF8574_IoExp/src/PCF8574_IoExp.c"
 	"keypad/src/keypad.c"
+	"io_expander/src/io_expander.c"
 	INCLUDE_DIRS
 	"ILI9341/includes"
 	"PCF8574_IoExp/includes"
 	"keypad/includes"
+	"io_expander/includes"
 	REQUIRES
 	driver
 	esp_hal

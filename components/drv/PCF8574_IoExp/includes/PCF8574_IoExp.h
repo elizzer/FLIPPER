@@ -24,8 +24,8 @@ typedef enum PCF8574_IoExp_pinDirection_e
 
 typedef struct PCF8574_config_s
 {
-    i2c_hal_bus_handle_t *i2c_bus_handle;
-    i2c_hal_device_handle_t *i2c_device_handle;
+    I2cHalBusHandle_t *i2c_bus_handle;
+    I2cHalDeviceHandle_t *i2c_device_handle;
     uint8_t max_pins; /*Max no of pins per port*/
     uint8_t max_port;
     gpio_hal_pin init_gpio;
@@ -33,8 +33,8 @@ typedef struct PCF8574_config_s
 
 typedef struct PCF8574_ctx_s{
     I2C_7BitAddress_t dev_address;
-    i2c_hal_bus_handle_s i2c_bus_handle;
-    i2c_hal_device_handle_t dev_handle;
+    I2cHalBusHandle_t i2c_bus_handle;
+    I2cHalDeviceHandle_t dev_handle;
     
 }PCF8574_ctx_t;
 
@@ -57,6 +57,6 @@ int8_t PCF8574_IoExp_setPort(PCF8574_handle_t *handle, uint8_t portNo, uint8_t v
 int8_t PCF8574_IoExp_readPin(PCF8574_handle_t *, uint8_t portNo, uint8_t pinNo, uint8_t *value);
 int8_t PCF8574_IoExp_readPort(PCF8574_handle_t *handle, uint8_t portNo, uint8_t *value);
 
-// esp_err_t i2c_hal_probe(i2c_hal_bus_handle_t *bus_handle, i2c_hal_device_handle_t *dev_handle);
+// esp_err_t i2c_hal_probe(I2cHalBusHandle_t *bus_handle, I2cHalDeviceHandle_t *dev_handle);
 
 #endif /* PCF8574_IOEXP_H */

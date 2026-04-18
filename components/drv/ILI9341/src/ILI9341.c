@@ -69,7 +69,7 @@ int8_t ili9341_init(ili9341_config_t config, ili9341_handle_t *handle)
     /* Initialize the display with the provided configuration */
     printf("\n\rILI9341 GPIO Configuration\n");
     // config and set all the io pins
-    gpio_hal_pin_config_t pin_config = {
+    gpioHalPinConfig_t pin_config = {
         .pin_num = config.dc_io_num,
         .mode = GPIO_HAL_OUTPUT,
         .pull = GPIO_HAL_NOPULL};
@@ -132,7 +132,7 @@ int8_t ili9341_send_command(uint8_t cmd, ili9341_handle_t *handle)
     }
 
     ili9341_config_t *config = (ili9341_config_t *)handle;
-    hal_spi_transaction_t transaction;
+    SpiHalTransaction_t transaction;
     transaction.tx_buffer = &cmd;
     transaction.rx_buffer = NULL;
     transaction.tx_length = 8; // Command is 1 byte
@@ -141,7 +141,7 @@ int8_t ili9341_send_command(uint8_t cmd, ili9341_handle_t *handle)
     // assert cmd io
     // ILI9341_CMD_MODE(config->dc_io_num); // Command mode
     gpio_hal_set_level(config->dc_io_num, ILI9341_CMD);
-    spi_transfer(config->display_handle, &transaction);
+    spi_hal_transfer(config->display_handle, &transaction);
 
     return 0;
 }
@@ -152,7 +152,7 @@ int8_t ili9341_send_data(uint8_t *data, uint32_t length, ili9341_handle_t *handl
     /* Send data to the display */
 
     ili9341_config_t *config = (ili9341_config_t *)handle;
-    hal_spi_transaction_t transaction;
+    SpiHalTransaction_t transaction;
     transaction.tx_buffer = data;
     transaction.rx_buffer = NULL;
     transaction.tx_length = length * 8; // Length in bits
@@ -161,7 +161,7 @@ int8_t ili9341_send_data(uint8_t *data, uint32_t length, ili9341_handle_t *handl
     // assert data io
     // ILI9341_DATA_MODE(config->dc_io_num); // Data mode
     gpio_hal_set_level(config->dc_io_num, ILI9341_DATA);
-    spi_transfer(config->display_handle, &transaction);
+    spi_hal_transfer(config->display_handle, &transaction);
 
     return 0;
 }
@@ -173,7 +173,7 @@ void ili9341_send_565_pxl_data(uint16_t *data, size_t len, ili9341_handle_t *han
     ili9341_send_command(MEM_WRITE, handle);
 
     // printf("Sending pixel data...\n");
-    hal_spi_transaction_t transaction;
+    SpiHalTransaction_t transaction;
 
     esp_err_t ret;
     ret = ili9341_send_data((uint8_t *)data, len * 2, handle); // Each pixel is 2 bytes

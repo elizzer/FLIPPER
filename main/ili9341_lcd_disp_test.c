@@ -63,7 +63,7 @@ void ili9341_lcd_disp_test(void)
 {
     /* Test function to display something on the ILI9341 LCD */
 
-    hal_spi_bus_config_t bus_config = {
+    SpiHalBusConfig_t bus_config = {
         .spi_instance = SPI_NUM_3,
         .mosi_io_num = IO_NUM_23,
         .miso_io_num = IO_NUM_19,
@@ -73,25 +73,25 @@ void ili9341_lcd_disp_test(void)
         .max_transfer_sz = (240 * 320 * 2), // 2 KB
     };
 
-    hal_spi_bus_handle_t bus_handle;
-    esp_err_t ret = spi_bus_init(&bus_handle, &bus_config);
+    SpiHalBusHandle_t bus_handle;
+    esp_err_t ret = spi_hal_bus_init(&bus_handle, &bus_config);
     if (ret != ESP_OK)
     {
         printf("Failed to initialize SPI bus\n");
         return;
     }
 
-    hal_spi_device_config_t device_config = {
+    SpiHalDeviceConfig_t device_config = {
         .cs_io_num = IO_NUM_5,
         .clk_freq_hz = 30 * 1000 * 1000, // 1 MHz
     };
 
-    hal_spi_device_handle_t device_handle;
-    ret = spi_add_device(&bus_handle, &device_config, &device_handle);
+    SpiHalDeviceHandle_t device_handle;
+    ret = spi_hal_add_device(&bus_handle, &device_config, &device_handle);
     if (ret != ESP_OK)
     {
         printf("Failed to add SPI device\n");
-        spi_bus_deinit(&bus_handle);
+        spi_hal_bus_deinit(&bus_handle);
         return;
     }
 

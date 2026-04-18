@@ -5,10 +5,12 @@ idf_component_register(
 	"display_manager/display_manager.c"
 	"text/text.c"
 	"shapes/shapes.c"
+	"widgets/label/wd_label.c"
 	INCLUDE_DIRS
 	"font_manager"
 	"display_manager"
 	"text"
-        "shapes"
+	"shapes"
+	"widgets/label"
 	REQUIRES
 )

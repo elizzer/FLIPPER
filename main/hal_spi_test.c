@@ -8,7 +8,7 @@ uint8_t tx_data[2*1024]; // Example command to read JEDEC ID
 uint8_t rx_data[2*1024]; // Example command to read JEDEC ID
 
 void hal_spi_test(void){
-    hal_spi_bus_config_t bus_config = {
+    SpiHalBusConfig_t bus_config = {
         .spi_instance = SPI_NUM_3   ,
         .mosi_io_num = IO_NUM_23,
         .miso_io_num = IO_NUM_19,
@@ -18,23 +18,23 @@ void hal_spi_test(void){
         .max_transfer_sz = 2*1024, // 2 KB
     };
 
-    hal_spi_bus_handle_t bus_handle;
-    esp_err_t ret = spi_bus_init(&bus_handle, &bus_config);
+    SpiHalBusHandle_t bus_handle;
+    esp_err_t ret = spi_hal_bus_init(&bus_handle, &bus_config);
     if (ret != ESP_OK) {
         printf("Failed to initialize SPI bus\n");
         return;
     }
 
-    hal_spi_device_config_t device_config = {
+    SpiHalDeviceConfig_t device_config = {
         .cs_io_num = IO_NUM_5,
         .clk_freq_hz = 1*1000*1000,  // 1 MHz
     };
 
-    hal_spi_device_handle_t device_handle;
-    ret = spi_add_device(&bus_handle, &device_config, &device_handle);
+    SpiHalDeviceHandle_t device_handle;
+    ret = spi_hal_add_device(&bus_handle, &device_config, &device_handle);
     if (ret != ESP_OK) {
         printf("Failed to add SPI device\n");
-        spi_bus_deinit(&bus_handle);
+        spi_hal_bus_deinit(&bus_handle);
         return;
     }
 
@@ -48,13 +48,13 @@ void hal_spi_test(void){
     }
     
 
-    hal_spi_transaction_t transaction = {
+    SpiHalTransaction_t transaction = {
         .tx_buffer = tx_data,
         .rx_buffer = rx_data,
         .tx_length = sizeof(tx_data) * 8, // Length in bits
         .rx_length = 2*1024 * 8, // Length in bits
     };
-    ret = spi_transfer(&device_handle, &transaction);
+    ret = spi_hal_transfer(&device_handle, &transaction);
     if (ret != ESP_OK) {
         printf("SPI transfer failed\n");
     } else {

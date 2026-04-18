@@ -4,6 +4,10 @@
 #include <string.h>
 #include <stdint.h>
 
+// #ifndef SWAP_16BIT_BYTE_ORDER
+#define SWAP_16BIT_BYTE_ORDER(d) (((d) >> 8) | ((d) << 8))
+// #endif
+
 typedef struct displayConfig displayHandle_t;
 
 typedef struct displayConfig {

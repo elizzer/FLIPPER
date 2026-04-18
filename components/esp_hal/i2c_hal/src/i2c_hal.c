@@ -3,7 +3,7 @@
 #include <stdint.h>
 
 
-esp_err_t i2c_hal_init(const i2c_hal_config_t *config, i2c_hal_bus_handle_t *handle)
+esp_err_t i2c_hal_init(const I2cHalConfig_t *config, I2cHalBusHandle_t *handle)
 {
 
     if (config == NULL || handle == NULL)
@@ -28,13 +28,13 @@ esp_err_t i2c_hal_init(const i2c_hal_config_t *config, i2c_hal_bus_handle_t *han
     return 0;
 }
 
-esp_err_t i2c_hal_deinit(i2c_hal_bus_handle_t *handle)
+esp_err_t i2c_hal_deinit(I2cHalBusHandle_t *handle)
 {
     return 0;
 
 }
 
-esp_err_t i2c_hal_add_device(const i2c_hal_device_config_t *config, i2c_hal_device_handle_t *dev_handle, i2c_hal_bus_handle_t *bus_handle)
+esp_err_t i2c_hal_add_device(const I2cHalDeviceConfig_t *config, I2cHalDeviceHandle_t *dev_handle, I2cHalBusHandle_t *bus_handle)
 {
     if (config == NULL || dev_handle == NULL || bus_handle == NULL)
     {
@@ -57,13 +57,13 @@ esp_err_t i2c_hal_add_device(const i2c_hal_device_config_t *config, i2c_hal_devi
 
 }
 
-esp_err_t i2c_hal_remove_device(i2c_hal_device_handle_t *handle)
+esp_err_t i2c_hal_remove_device(I2cHalDeviceHandle_t *handle)
 {
     return 0;
 
 }
 
-esp_err_t i2c_hal_transaction_init(i2c_hal_transaction_t *transaction)
+esp_err_t i2c_hal_transaction_init(I2cHalTransaction_t *transaction)
 {
     if (transaction == NULL)
     {
@@ -79,7 +79,7 @@ esp_err_t i2c_hal_transaction_init(i2c_hal_transaction_t *transaction)
     return 0;
 }
 
-esp_err_t i2c_hal_transfer(i2c_hal_transaction_t *transaction, i2c_hal_device_handle_t *dev_handle)
+esp_err_t i2c_hal_transfer(I2cHalTransaction_t *transaction, I2cHalDeviceHandle_t *dev_handle)
 {
 
     esp_err_t status;
@@ -114,7 +114,7 @@ esp_err_t i2c_hal_transfer(i2c_hal_transaction_t *transaction, i2c_hal_device_ha
 
 }
 
-esp_err_t i2c_hal_device_probe(i2c_hal_bus_handle_t *bus_handle, i2c_hal_device_handle_t *dev_handle)
+esp_err_t i2c_hal_device_probe(I2cHalBusHandle_t *bus_handle, I2cHalDeviceHandle_t *dev_handle)
 {
     esp_err_t status;
 
@@ -130,7 +130,7 @@ esp_err_t i2c_hal_device_probe(i2c_hal_bus_handle_t *bus_handle, i2c_hal_device_
 }
 
 
-esp_err_t i2c_hal_probe(i2c_hal_bus_handle_t *bus_handle, uint8_t i2c_addr)
+esp_err_t i2c_hal_probe(I2cHalBusHandle_t *bus_handle, uint8_t i2c_addr)
 {
     esp_err_t status;
 

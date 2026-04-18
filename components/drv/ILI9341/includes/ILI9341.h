@@ -20,7 +20,7 @@ typedef struct ili9341_config_s
     uint16_t width;
     uint16_t height;
     uint8_t rotation;
-    hal_spi_device_handle_t *display_handle;
+    SpiHalDeviceHandle_t *display_handle;
     uint8_t dc_io_num;
     uint8_t cs_io_num;
     uint8_t reset_io_num;

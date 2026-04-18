@@ -4,14 +4,19 @@
 #include <stdio.h>
 #include <string.h>
 #include "event_manager.h"
-#include <driver/gpio.h> 
+#include <driver/gpio.h>
 
 static void IRAM_ATTR keypad_isr_handler(void *arg)
 {
 	uint8_t gpio_num = (uint32_t)arg; // which row fired, passed via arg
-	gpio_intr_disable(gpio_num); 
+	EventDescription_t ev_desc = {
+		.event_source = 1,
+		.event_type = EVENT_TYPE_IO_EXP,
+	};
+
+	gpio_intr_disable(gpio_num);
 	// post to event manager — ISR safe, non-blocking
-	post_semaphore_from_isr(EVENT_TYPE_IO_EXP);
+	event_manager_post_event_from_isr(ev_desc.event_type, ev_desc);
 	gpio_intr_enable(gpio_num);
 }
 
@@ -36,7 +41,7 @@ int8_t PCF8574_IoExp_init(PCF8574_handle_t *handle, PCF8574_config_t *config)
 	memcpy(handle, config, sizeof(PCF8574_config_t));
 
 	// configure the gpio intrupt
-	gpio_hal_pin_config_t ioExp_int_pin = {
+	gpioHalPinConfig_t ioExp_int_pin = {
 		.pin_num = config->init_gpio,
 		.mode = GPIO_HAL_INPUT,
 		.pull = GPIO_HAL_PULLUP,
@@ -75,7 +80,7 @@ int8_t PCF8574_IoExp_setPin(PCF8574_handle_t *handle, uint8_t portNo, uint8_t pi
 	}
 
 	PCF8574_config_t *config = (PCF8574_config_t *)handle;
-	i2c_hal_transaction_t transaction;
+	I2cHalTransaction_t transaction;
 	i2c_hal_transaction_init(&transaction);
 
 	uint8_t sendData;
@@ -110,7 +115,7 @@ int8_t PCF8574_IoExp_setPort(PCF8574_handle_t *handle, uint8_t portNo, uint8_t v
 	}
 
 	PCF8574_config_t *config = (PCF8574_config_t *)handle;
-	i2c_hal_transaction_t transaction;
+	I2cHalTransaction_t transaction;
 	i2c_hal_transaction_init(&transaction);
 
 	uint8_t sendData;
@@ -146,7 +151,7 @@ int8_t PCF8574_IoExp_readPin(PCF8574_handle_t *handle, uint8_t portNo, uint8_t p
 
 	PCF8574_config_t *config = (PCF8574_config_t *)handle;
 
-	i2c_hal_transaction_t transaction;
+	I2cHalTransaction_t transaction;
 	i2c_hal_transaction_init(&transaction);
 
 	uint8_t readValue;
@@ -174,7 +179,7 @@ int8_t PCF8574_IoExp_readPort(PCF8574_handle_t *handle, uint8_t portNo, uint8_t 
 
 	PCF8574_config_t *config = (PCF8574_config_t *)handle;
 
-	i2c_hal_transaction_t transaction;
+	I2cHalTransaction_t transaction;
 	i2c_hal_transaction_init(&transaction);
 
 	uint8_t readValue;

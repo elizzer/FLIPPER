@@ -7,19 +7,18 @@
 #include "driver/spi_common.h"
 #include "driver/spi_master.h"
 
-typedef struct hal_spi_bus_handle_s
-{
-
+typedef struct SpiHalBusHandle_s
+{   
     uint8_t host_id;
 
-} hal_spi_bus_handle_t;
+} SpiHalBusHandle_t;
 
-typedef struct hal_spi_device_handle_s
+typedef struct SpiHalDeviceHandle_s
 {
     spi_device_handle_t esp_handle;
-} hal_spi_device_handle_t;
+} SpiHalDeviceHandle_t;
 
-typedef struct hal_spi_transaction_s
+typedef struct SpiHalTransaction_s
 {
 
     uint8_t *tx_buffer; /*!< Pointer to transmit buffer */
@@ -27,9 +26,9 @@ typedef struct hal_spi_transaction_s
     size_t tx_length;   /*!< Length of data to be transmitted, in bits */
     size_t rx_length;   /*!< Length of data to be received, in bits */
 
-} hal_spi_transaction_t;
+} SpiHalTransaction_t;
 
-typedef struct hal_spi_bus_config_s
+typedef struct SpiHalBusConfig_s
 {
     uint8_t spi_instance;
     uint8_t mosi_io_num;   /*!< GPIO number for MOSI signal */
@@ -39,22 +38,22 @@ typedef struct hal_spi_bus_config_s
     int8_t quadhd_io_num; /*!< GPIO number for HD signal */
     uint32_t max_transfer_sz; /*!< Maximum transfer size in bytes */
 
-} hal_spi_bus_config_t;
+} SpiHalBusConfig_t;
 
-typedef struct hal_spi_device_config_s
+typedef struct SpiHalDeviceConfig_s
 {
 
     uint8_t cs_io_num;
     uint32_t clk_freq_hz;
 
-} hal_spi_device_config_t;
+} SpiHalDeviceConfig_t;
 
-esp_err_t spi_bus_init(hal_spi_bus_handle_t *bus_handle, const hal_spi_bus_config_t *bus_config);
-esp_err_t spi_bus_deinit(hal_spi_bus_handle_t *bus_handle);
+esp_err_t spi_hal_bus_init(SpiHalBusHandle_t *bus_handle, const SpiHalBusConfig_t *bus_config);
+esp_err_t spi_hal_bus_deinit(SpiHalBusHandle_t *bus_handle);
 
-esp_err_t spi_add_device(hal_spi_bus_handle_t *bus_handle, const hal_spi_device_config_t *device_config, hal_spi_device_handle_t *device_handle);
-esp_err_t spi_remove_device(hal_spi_device_handle_t *device_handle);
+esp_err_t spi_hal_add_device(SpiHalBusHandle_t *bus_handle, const SpiHalDeviceConfig_t *device_config, SpiHalDeviceHandle_t *device_handle);
+esp_err_t spi_hal_remove_device(SpiHalDeviceHandle_t *device_handle);
 
-esp_err_t spi_transfer(hal_spi_device_handle_t *device_handle, hal_spi_transaction_t *transaction);
+esp_err_t spi_hal_transfer(SpiHalDeviceHandle_t *device_handle, SpiHalTransaction_t *transaction);
 
 #endif // ESP_HAL_SPI_H

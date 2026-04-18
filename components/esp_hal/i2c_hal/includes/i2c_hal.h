@@ -8,28 +8,28 @@
 
 typedef uint8_t I2C_7BitAddress_t;
 
-typedef struct i2c_hal_config_s
+typedef struct I2cHalConfig_s
 {
     i2c_port_t i2c_instance;
     uint8_t scl_io_num;
     uint8_t sda_io_num;
     uint32_t clk_speed_hz;
 
-} i2c_hal_config_t;
+} I2cHalConfig_t;
 
-typedef enum i2c_hal_addr_bit_len_e{
+typedef enum I2cHalAddrBitLen_e{
     I2C_HAL_ADDR_BIT_LEN_7,
     I2C_HAL_ADDR_BIT_LEN_10
-}i2c_hal_addr_bit_len_t;
+}I2cHalAddrBitLen_t;
 
-typedef struct i2c_hal_bus_handle_s
+typedef struct I2cHalBusHandle_s
 {
     i2c_port_t port;
     i2c_master_bus_handle_t bus_handle;
 
-} i2c_hal_bus_handle_t;
+} I2cHalBusHandle_t;
 
-typedef struct i2c_hal_transaction_s
+typedef struct I2cHalTransaction_s
 {
     /* data */
     uint8_t *tx_buffer; /*!< Pointer to transmit buffer */
@@ -37,37 +37,37 @@ typedef struct i2c_hal_transaction_s
     size_t tx_length;   /*!< Length of data to be transmitted, in bytes */
     size_t rx_length;   /*!< Length of data to be received, in bytes */
 
-}i2c_hal_transaction_t;
+}I2cHalTransaction_t;
 
-typedef struct i2c_hal_device_config_s
+typedef struct I2cHalDeviceConfig_s
 {
-    i2c_hal_addr_bit_len_t addr_len; 
+    I2cHalAddrBitLen_t addr_len; 
     uint16_t device_address;
     uint32_t clk_freq_hz;
 
-} i2c_hal_device_config_t;
+} I2cHalDeviceConfig_t;
 
-typedef struct i2c_hal_device_handle_s
+typedef struct I2cHalDeviceHandle_s
 {
     uint16_t address;
     i2c_master_dev_handle_t dev_handle;
 
-} i2c_hal_device_handle_t;
+} I2cHalDeviceHandle_t;
 
 
-esp_err_t i2c_hal_init(const i2c_hal_config_t *config, i2c_hal_bus_handle_t *handle);
-esp_err_t i2c_hal_deinit(i2c_hal_bus_handle_t *handle);
+esp_err_t i2c_hal_init(const I2cHalConfig_t *config, I2cHalBusHandle_t *handle);
+esp_err_t i2c_hal_deinit(I2cHalBusHandle_t *handle);
 
-// esp_err_t i2c_hal_add_device(const i2c_hal_device_config_t *config, i2c_hal_device_handle_t *handle);
-esp_err_t i2c_hal_add_device(const i2c_hal_device_config_t *config, i2c_hal_device_handle_t *dev_handle, i2c_hal_bus_handle_t *bus_handle);
-esp_err_t i2c_hal_remove_device(i2c_hal_device_handle_t *handle);
+// esp_err_t i2c_hal_add_device(const I2cHalDeviceConfig_t *config, I2cHalDeviceHandle_t *handle);
+esp_err_t i2c_hal_add_device(const I2cHalDeviceConfig_t *config, I2cHalDeviceHandle_t *dev_handle, I2cHalBusHandle_t *bus_handle);
+esp_err_t i2c_hal_remove_device(I2cHalDeviceHandle_t *handle);
 
-esp_err_t i2c_hal_transaction_init(i2c_hal_transaction_t *transaction);
-esp_err_t i2c_hal_transfer(i2c_hal_transaction_t *transaction, i2c_hal_device_handle_t *handle);
+esp_err_t i2c_hal_transaction_init(I2cHalTransaction_t *transaction);
+esp_err_t i2c_hal_transfer(I2cHalTransaction_t *transaction, I2cHalDeviceHandle_t *handle);
 
 
-esp_err_t i2c_hal_device_probe(i2c_hal_bus_handle_t *bus_handle, i2c_hal_device_handle_t *dev_handle);
-esp_err_t i2c_hal_probe(i2c_hal_bus_handle_t *bus_handle, uint8_t i2c_addr);
+esp_err_t i2c_hal_device_probe(I2cHalBusHandle_t *bus_handle, I2cHalDeviceHandle_t *dev_handle);
+esp_err_t i2c_hal_probe(I2cHalBusHandle_t *bus_handle, uint8_t i2c_addr);
 
 
 

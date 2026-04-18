@@ -39,7 +39,7 @@ esp_err_t gpio_hal_init(void)
     return ret;
 }
 
-static gpio_int_type_t translate_intr_type(gpio_hal_intr_type_t intr_type)
+static gpio_int_type_t translate_intr_type(gpioHalIntrType_t intr_type)
 {
     switch (intr_type)
     {
@@ -53,7 +53,7 @@ static gpio_int_type_t translate_intr_type(gpio_hal_intr_type_t intr_type)
     }
 }
 
-esp_err_t gpio_hal_config_pin(const gpio_hal_pin_config_t *pin_config)
+esp_err_t gpio_hal_config_pin(const gpioHalPinConfig_t *pin_config)
 {
     if (pin_config == NULL)
     {
@@ -132,7 +132,7 @@ esp_err_t gpio_hal_get_level(uint8_t pin_num, uint8_t *level)
     return ESP_OK;
 }
 
-esp_err_t gpio_hal_isr_register(uint8_t pin_num, gpio_hal_isr_t isr, void *arg)
+esp_err_t gpio_hal_isr_register(uint8_t pin_num, gpio_isr_t isr, void *arg)
 {
     if (isr == NULL)
     {

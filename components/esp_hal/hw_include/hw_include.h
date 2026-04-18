@@ -13,7 +13,7 @@ typedef enum
     SPI_NUM_1 = SPI1_HOST,
     SPI_NUM_2 = SPI2_HOST,
     SPI_NUM_3 = SPI3_HOST,
-} spi_port_t;
+} spiPort_t;
 
 #define MAX_I2C_NUM 2
 // typedef enum
@@ -51,6 +51,6 @@ typedef enum
     IO_NUM_24,
     IO_NUM_25,
     IO_NUM_26 = GPIO_NUM_26,
-} io_num_t;
+} ioNum_t;
 
 #endif // HW_INCLUDE_H

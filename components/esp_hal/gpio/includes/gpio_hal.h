@@ -11,14 +11,14 @@ typedef enum
     GPIO_HAL_NOPULL,
     GPIO_HAL_PULLUP,
     GPIO_HAL_PULLDOWN,
-} gpio_hal_pull_t;
+} gpioHalPull_t;
 
 typedef enum
 {
     GPIO_HAL_INPUT,
     GPIO_HAL_OUTPUT,
     GPIO_HAL_INPUT_OUTPUT,
-} gpio_hal_mode_t;
+} gpioHalMode_t;
 
 typedef enum
 {
@@ -28,23 +28,30 @@ typedef enum
     GPIO_HAL_INTR_ANYEDGE,
     GPIO_HAL_INTR_LOW_LEVEL,
     GPIO_HAL_INTR_HIGH_LEVEL,
-} gpio_hal_intr_type_t;
+} gpioHalIntrType_t;
 
-typedef void (*gpio_hal_isr_t)(void *arg);
-
-typedef struct gpio_hal_pin_config_s
+typedef enum
 {
-    uint8_t            pin_num;
-    gpio_hal_mode_t    mode;
-    gpio_hal_pull_t    pull;
-    gpio_hal_intr_type_t intr_type;   /* GPIO_HAL_INTR_DISABLE if not used */
-} gpio_hal_pin_config_t;
+    GPIO_HAL_LOW,
+    GPIO_HAL_HIGH,
+
+} gpioHalLevel_t;
+
+typedef void (*gpioHalIsr_fn)(void *arg);
+
+typedef struct gpioHalPinConfig_s
+{
+    uint8_t pin_num;
+    gpioHalMode_t mode;
+    gpioHalPull_t pull;
+    gpioHalIntrType_t intr_type; /* GPIO_HAL_INTR_DISABLE if not used */
+} gpioHalPinConfig_t;
 
 typedef uint8_t gpio_hal_pin;
 
 esp_err_t gpio_hal_init(void);
 
-esp_err_t gpio_hal_config_pin(const gpio_hal_pin_config_t *pin_config);
+esp_err_t gpio_hal_config_pin(const gpioHalPinConfig_t *pin_config);
 esp_err_t gpio_hal_set_level(uint8_t pin_num, uint8_t level);
 esp_err_t gpio_hal_get_level(uint8_t pin_num, uint8_t *level);
 
@@ -60,7 +67,7 @@ esp_err_t gpio_hal_get_level(uint8_t pin_num, uint8_t *level);
  * @param arg      Opaque argument forwarded to the handler
  * @return ESP_OK on success, or an esp_err_t error code
  */
-esp_err_t gpio_hal_isr_register(uint8_t pin_num, gpio_hal_isr_t isr, void *arg);
+esp_err_t gpio_hal_isr_register(uint8_t pin_num, gpio_isr_t isr, void *arg);
 
 /**
  * @brief  Remove the ISR handler for a pin and disable its interrupt.
