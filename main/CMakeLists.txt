@@ -5,8 +5,8 @@ idf_component_register(
 	INCLUDE_DIRS
 	"."
 	REQUIRES
-	esp_hal
-	drv
+	karuvi_hal
+	drivers
 	gui_framework
 	event_manager
 	esp_timer

@@ -1,11 +1,13 @@
 #include <driver/gpio.h>
 #include "i2c_hal.h"
-#include "PCF8574_IoExp.h"
-#include "ILI9341.h"
+#include "io_expander/PCF8574/PCF8574.h"
+#include "display/ILI9341/ILI9341.h"
 #include "spi_hal.h"
 #include "hw_include.h"
 #include "display_manager.h"
-#include"keypad.h"
+#include "keypad/keypad.h"
+
+
 
 static SpiHalBusHandle_t SPI3_bus_handle;
 static SpiHalDeviceHandle_t tft_display_spi_handle;

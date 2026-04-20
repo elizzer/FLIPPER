@@ -6,11 +6,13 @@ idf_component_register(
 	"text/text.c"
 	"shapes/shapes.c"
 	"widgets/label/wd_label.c"
+	"widgets/graph/wd_graph.c"
 	INCLUDE_DIRS
 	"font_manager"
 	"display_manager"
 	"text"
 	"shapes"
 	"widgets/label"
+	"widgets/graph"
 	REQUIRES
 )

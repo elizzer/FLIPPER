@@ -1,9 +1,8 @@
-#include "keypad.h"
 #include "string.h"
 #include "stdlib.h"
-#include "PCF8574_IoExp.h"
 #include "event_manager.h"
-
+#include "io_expander/PCF8574/PCF8574.h"
+#include "keypad.h"
 /* ─────────────────────────────────────────
  * Internal task parameter struct
  * kept private — not exposed in header

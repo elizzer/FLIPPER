@@ -1,0 +1,12 @@
+idf_component_register(
+	SRCS
+	"display/ILI9341/ILI9341.c"
+	"io_expander/PCF8574/PCF8574.c"
+	"keypad/keypad.c"
+	INCLUDE_DIRS
+	"."
+	REQUIRES
+	driver
+	karuvi_hal
+	event_manager
+)

@@ -1,0 +1,14 @@
+idf_component_register(
+	SRCS
+	"spi/spi_hal.c"
+	"gpio/gpio_hal.c"
+	"i2c/i2c_hal.c"
+	"hw_include/hw_include.c"
+	INCLUDE_DIRS
+	"spi"
+	"gpio"
+	"i2c"
+	"hw_include"
+	REQUIRES
+	driver
+)
