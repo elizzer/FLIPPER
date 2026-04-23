@@ -17,7 +17,7 @@ int8_t draw_circle(int x_center, int y_center, int radius, uint16_t color);
 int8_t draw_filled_circle(int x_center, int y_center, int radius, uint16_t color);
 int8_t draw_polygon (uint16_t color, int points, ...);
 int8_t draw_filled_polygon (uint16_t color, int points, ...);
-int8_t draw_alphabet_seven_seg (int number, uint16_t color);
+//int8_t draw_alphabet_seven_seg (int number, uint16_t color);
 int8_t draw_arc(int quad, int x_center, int y_center, int radius, uint16_t color);
 
 

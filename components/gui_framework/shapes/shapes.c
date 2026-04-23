@@ -346,7 +346,7 @@ int8_t draw_arc(int quad, int x_center, int y_center, int radius, uint16_t color
 	return 0;
 }
 
-int8_t draw_alphabet_seven_seg (int number, uint16_t color) {
+/*int8_t draw_alphabet_seven_seg (int number, uint16_t color) {
 	if (number > 26 || number < 1){
 		printf ("Error : Invalid alphabet number %d\nTry a valid alphabet between 1 and 26\n", number);
 		return -1;
@@ -385,7 +385,7 @@ int8_t draw_alphabet_seven_seg (int number, uint16_t color) {
 		default :
 	}
 	return 0;
-}
+}*/
 
 int8_t shape_deinit()
 {
