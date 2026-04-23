@@ -3,11 +3,14 @@ idf_component_register(
 	"spi/spi_hal.c"
 	"gpio/gpio_hal.c"
 	"i2c/i2c_hal.c"
+	"clock_gen/clock_gen_hal.c"
+	"clock_gen/gpio_clock_gen/gpio_clock_gen.c"
 	"hw_include/hw_include.c"
 	INCLUDE_DIRS
 	"spi"
 	"gpio"
 	"i2c"
+	"clock_gen"
 	"hw_include"
 	REQUIRES
 	driver
