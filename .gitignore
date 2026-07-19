@@ -1,0 +1,5 @@
+.cache
+.embedder
+/build
+*.odt
+*.drawio
