@@ -38,6 +38,8 @@ int8_t cli_gpio_set_dir(gpioHandle_t  handle, char *args);
 int8_t cli_gpio_set_pull(gpioHandle_t  handle, char *args);
 int8_t cli_gpio_clear(gpioHandle_t handle, char *args);
 int8_t cli_gpio_set(gpioHandle_t handle, char *args);
+int8_t cli_gpio_toggle(gpioHandle_t handle, char *args);
+int8_t cli_gpio_read(gpioHandle_t handle, char *args);
 
 
 #endif // CLI_GPIO_H

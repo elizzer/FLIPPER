@@ -4,17 +4,18 @@
 #include "cli_gpio.h"
 #include "interface_registry.h"
 
-
 typedef int8_t (*gpio_cmd_func_t)(gpioHandle_t, char *);
 
 cmdEntry_t gpio_cmds[] = {
-    {"set_pin", (generic_fp_t)cli_gpio_set_pin,""},
-    {"get_config", (generic_fp_t)cli_gpio_get_config,""},
-    {"set_dir", (generic_fp_t)cli_gpio_set_dir,""},
-    {"set_pull", (generic_fp_t)cli_gpio_set_pull,""},
-    {"set", (generic_fp_t)cli_gpio_set,""},
-    {"clear", (generic_fp_t)cli_gpio_clear,""},
-    {"", NULL,""} // sentinel
+    {"set_pin", (generic_fp_t)cli_gpio_set_pin, "set_pin <IO_x>                        : Set active GPIO pin (e.g. set_pin IO_5)"},
+    {"get_config", (generic_fp_t)cli_gpio_get_config, "get_config                            : Print current pin, dir, pull, level"},
+    {"set_dir", (generic_fp_t)cli_gpio_set_dir, "set_dir <input|output>                : Set pin direction"},
+    {"set_pull", (generic_fp_t)cli_gpio_set_pull, "set_pull <no_pull|pull_up|pull_down>  : Set pin pull mode"},
+    {"set", (generic_fp_t)cli_gpio_set, "set                                   : Drive active pin HIGH"},
+    {"clear", (generic_fp_t)cli_gpio_clear, "clear                                 : Drive active pin LOW"},
+    {"read", (generic_fp_t)cli_gpio_read, "read                                  : Read and print active pin level"},
+    {"toggle", (generic_fp_t)cli_gpio_toggle, "toggle                                 : Toggle active pin level"},
+    {"", NULL, ""} // sentinel
 };
 
 int8_t cli_gpio_register()
@@ -85,10 +86,10 @@ int8_t cli_gpio_cmd_dispatch(gpioHandle_t handle, const char *cmd)
 void cli_gpio_help(void)
 {
     printf("\n\r--- GPIO Interface Commands ---\n\r");
-    printf("  set_pin <IO_x>                        : Set active GPIO pin (e.g. set_pin IO_5)\n\r");
-    printf("  set_dir <input|output>                : Set pin direction\n\r");
-    printf("  set_pull <no_pull|pull_up|pull_down>  : Set pin pull mode\n\r");
-    printf("  get_config                            : Print current pin, dir, pull, level\n\r");
+    for (int i = 0; gpio_cmds[i].func != NULL; i++)
+    {
+        printf("  %s\n\r", gpio_cmds[i].help_str);
+    }
     printf("--------------------------------\n\r");
 }
 
@@ -245,6 +246,64 @@ int8_t cli_gpio_clear(gpioHandle_t handle, char *args)
     if (retVal != KX_HAL_OK)
     {
         LOG_ERR("Unable to set the pin");
+        return KX_HAL_ERR_FAIL;
+    }
+
+    return KX_HAL_OK;
+}
+
+int8_t cli_gpio_read(gpioHandle_t handle, char *args)
+{
+    if (handle == NULL)
+    {
+        return -1;
+    }
+    gpioconfig_t *gpio = (gpioconfig_t *)handle;
+    if (gpio->pin == 0xFF)
+    {
+        LOG_WARN("IO is not set for this pin");
+        return KX_HAL_ERR_FAIL;
+    }
+
+    Kx_ErrorCode retVal;
+    Kx_GpioState_t pin_state;
+    retVal = KxGpio_Read(gpio->pin, &pin_state);
+    if (retVal != KX_HAL_OK)
+    {
+        LOG_ERR("Unable to read the pin");
+        return KX_HAL_ERR_FAIL;
+    }
+
+    if (pin_state == KX_GPIO_STATE_HIGH)
+    {
+        LOG_INFO("IO_%d is HIGH", gpio->pin);
+    }
+    else if (pin_state == KX_GPIO_STATE_LOW)
+    {
+        LOG_INFO("IO_%d is LOW", gpio->pin);
+    }
+
+    return KX_HAL_OK;
+}
+
+int8_t cli_gpio_toggle(gpioHandle_t handle, char *args)
+{
+    if (handle == NULL)
+    {
+        return -1;
+    }
+    gpioconfig_t *gpio = (gpioconfig_t *)handle;
+    if (gpio->pin == 0xFF)
+    {
+        LOG_WARN("IO is not set for this pin");
+        return KX_HAL_ERR_FAIL;
+    }
+
+    Kx_ErrorCode retVal;
+    retVal = KxGpio_Toggle(gpio->pin);
+    if (retVal != KX_HAL_OK)
+    {
+        LOG_ERR("Unable to toggle the pin");
         return KX_HAL_ERR_FAIL;
     }
 
