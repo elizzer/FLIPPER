@@ -4,14 +4,17 @@
 #include "cli_gpio.h"
 #include "interface_registry.h"
 
+
 typedef int8_t (*gpio_cmd_func_t)(gpioHandle_t, char *);
 
 cmdEntry_t gpio_cmds[] = {
-    {"set_pin", (generic_fp_t)cli_gpio_set_pin},
-    {"get_config", (generic_fp_t)cli_gpio_get_config},
-    {"set_dir", (generic_fp_t)cli_gpio_set_dir},
-    {"set_pull", (generic_fp_t)cli_gpio_set_pull},
-    {"", NULL} // sentinel
+    {"set_pin", (generic_fp_t)cli_gpio_set_pin,""},
+    {"get_config", (generic_fp_t)cli_gpio_get_config,""},
+    {"set_dir", (generic_fp_t)cli_gpio_set_dir,""},
+    {"set_pull", (generic_fp_t)cli_gpio_set_pull,""},
+    {"set", (generic_fp_t)cli_gpio_set,""},
+    {"clear", (generic_fp_t)cli_gpio_clear,""},
+    {"", NULL,""} // sentinel
 };
 
 int8_t cli_gpio_register()
@@ -44,6 +47,8 @@ int8_t cli_gpio_init(gpioHandle_t *handle)
     if (!gpio)
         return -1; // allocation failed
     memset(gpio, 0, sizeof(gpioconfig_t));
+    // set the pin to ff
+    gpio->pin = 0xFF;
     *handle = (void *)gpio;
     return 0;
 }
@@ -92,8 +97,13 @@ static int8_t get_io_num(char *io)
     // io string is defined as IO_x
     // can we use sscanf to get the number??
     int num = -1;
-    sscanf(io, "IO_%d", &num);
-    return num;
+    if (io != NULL)
+    {
+
+        sscanf(io, "IO_%d", &num);
+        return num;
+    }
+    return -1;
 }
 
 int8_t cli_gpio_set_pin(gpioHandle_t handle, char *args)
@@ -104,9 +114,20 @@ int8_t cli_gpio_set_pin(gpioHandle_t handle, char *args)
     }
     // must validate io number
     gpioconfig_t *gpio = (gpioconfig_t *)handle;
-    gpio->pin = get_io_num(args);
-    LOG_INFO("GPIO pin set to %d", gpio->pin);
-    return 0;
+    int8_t retVal = get_io_num(args);
+    if (retVal != -1)
+    {
+        gpio->pin = retVal;
+        LOG_INFO("GPIO pin set to %d", gpio->pin);
+        return 0;
+    }
+    else
+    {
+
+        gpio->pin = 0xFF;
+        LOG_ERR("Invalid IO number");
+        return -1;
+    }
 }
 
 static void print_config(gpioconfig_t *config)
@@ -139,10 +160,12 @@ int8_t cli_gpio_set_dir(gpioHandle_t handle, char *args)
     if (strcmp(args, "output") == 0)
     {
         gpio->dir = 0;
+        KxGpio_SetDirection(gpio->pin, KX_GPIO_DIR_OUTPUT);
     }
     else if (strcmp(args, "input") == 0)
     {
         gpio->dir = 1;
+        KxGpio_SetDirection(gpio->pin, KX_GPIO_DIR_INPUT);
     }
     else
     {
@@ -161,18 +184,69 @@ int8_t cli_gpio_set_pull(gpioHandle_t handle, char *args)
     if (strcmp(args, "no_pull") == 0)
     {
         gpio->pull = 0;
+        KxGpio_SetPull(gpio->pin, KX_GPIO_PULL_NONE);
     }
     else if (strcmp(args, "pull_up") == 0)
     {
         gpio->pull = 1;
+        KxGpio_SetPull(gpio->pin, KX_GPIO_PULL_UP);
     }
     else if (strcmp(args, "pull_down") == 0)
     {
         gpio->pull = 2;
+        KxGpio_SetPull(gpio->pin, KX_GPIO_PULL_DOWN);
     }
     else
     {
         LOG_ERR("\n\rInvalid PULL mode");
     }
     return 0;
+}
+
+int8_t cli_gpio_set(gpioHandle_t handle, char *args)
+{
+    if (handle == NULL)
+    {
+        return -1;
+    }
+    gpioconfig_t *gpio = (gpioconfig_t *)handle;
+    if (gpio->pin == 0xFF)
+    {
+        LOG_WARN("IO is not set for this pin");
+        return KX_HAL_ERR_FAIL;
+    }
+
+    Kx_ErrorCode retVal;
+    retVal = KxGpio_Set(gpio->pin);
+    if (retVal != KX_HAL_OK)
+    {
+        LOG_ERR("Unable to set the pin");
+        return KX_HAL_ERR_FAIL;
+    }
+
+    return KX_HAL_OK;
+}
+
+int8_t cli_gpio_clear(gpioHandle_t handle, char *args)
+{
+    if (handle == NULL)
+    {
+        return -1;
+    }
+    gpioconfig_t *gpio = (gpioconfig_t *)handle;
+    if (gpio->pin == 0xFF)
+    {
+        LOG_WARN("IO is not set for this pin");
+        return KX_HAL_ERR_FAIL;
+    }
+
+    Kx_ErrorCode retVal;
+    retVal = KxGpio_Clear(gpio->pin);
+    if (retVal != KX_HAL_OK)
+    {
+        LOG_ERR("Unable to set the pin");
+        return KX_HAL_ERR_FAIL;
+    }
+
+    return KX_HAL_OK;
 }
