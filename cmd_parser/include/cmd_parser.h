@@ -9,6 +9,7 @@ typedef void (*generic_fp_t)(void);
 typedef struct {
     char key[32];
     generic_fp_t func;
+    const char* help_str;
 } cmdEntry_t;
 
 

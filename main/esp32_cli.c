@@ -132,13 +132,13 @@ void cmd_reboot()
 }
 
 cmdEntry_t g_cmd_table[] = {
-    {"hello", cmd_hello},
-    {"print_banner", cmd_print_banner},
-    {"help", cmd_help},
-    {"create", cmd_create},
-    {"use", cmd_use},
-    {"reboot", cmd_reboot},
-    {"", NULL},
+    {"hello", cmd_hello,""},
+    {"print_banner", cmd_print_banner,""},
+    {"help", cmd_help,""},
+    {"create", cmd_create,""},
+    {"use", cmd_use,""},
+    {"reboot", cmd_reboot,""},
+    {"", NULL,""},
 };
 
 void app_main(void)
