@@ -9,6 +9,7 @@ set(EXTRA_COMPONENT_DIRS
     ${CMAKE_SOURCE_DIR}/cli_app
     ${CMAKE_SOURCE_DIR}/cli_gpio
     ${CMAKE_SOURCE_DIR}/interface_registry
+    ${CMAKE_SOURCE_DIR}/kx_hal
 
 )
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
