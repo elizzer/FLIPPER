@@ -7,14 +7,14 @@
 typedef int8_t (*gpio_cmd_func_t)(gpioHandle_t, char *);
 
 cmdEntry_t gpio_cmds[] = {
-    {"set_pin", (generic_fp_t)cli_gpio_set_pin, "set_pin <IO_x>                        : Set active GPIO pin (e.g. set_pin IO_5)"},
-    {"get_config", (generic_fp_t)cli_gpio_get_config, "get_config                            : Print current pin, dir, pull, level"},
-    {"set_dir", (generic_fp_t)cli_gpio_set_dir, "set_dir <input|output>                : Set pin direction"},
-    {"set_pull", (generic_fp_t)cli_gpio_set_pull, "set_pull <no_pull|pull_up|pull_down>  : Set pin pull mode"},
-    {"set", (generic_fp_t)cli_gpio_set, "set                                   : Drive active pin HIGH"},
-    {"clear", (generic_fp_t)cli_gpio_clear, "clear                                 : Drive active pin LOW"},
-    {"read", (generic_fp_t)cli_gpio_read, "read                                  : Read and print active pin level"},
-    {"toggle", (generic_fp_t)cli_gpio_toggle, "toggle                                 : Toggle active pin level"},
+    {"set_pin", (generic_fp_t)cli_gpio_set_pin,         "set_pin <IO_x>                        : Set active GPIO pin (e.g. set_pin IO_5)"},
+    {"get_config", (generic_fp_t)cli_gpio_get_config,   "get_config                            : Print current pin, dir, pull, level"},
+    {"set_dir", (generic_fp_t)cli_gpio_set_dir,         "set_dir <input|output>                : Set pin direction"},
+    {"set_pull", (generic_fp_t)cli_gpio_set_pull,       "set_pull <no_pull|pull_up|pull_down>  : Set pin pull mode"},
+    {"set", (generic_fp_t)cli_gpio_set,                 "set                                   : Drive active pin HIGH"},
+    {"clear", (generic_fp_t)cli_gpio_clear,             "clear                                 : Drive active pin LOW"},
+    {"read", (generic_fp_t)cli_gpio_read,               "read                                  : Read and print active pin level"},
+    {"toggle", (generic_fp_t)cli_gpio_toggle,           "toggle                                : Toggle active pin level"},
     {"", NULL, ""} // sentinel
 };
 
@@ -27,7 +27,7 @@ int8_t cli_gpio_register()
     entry.init = (InterfaceHandlerInitCB_t)cli_gpio_init;
     entry.de_init = (InterfaceHandlerDeInitCB_t)cli_gpio_deinit;
     entry.cmd_handler = (InterfaceHandlerCmdCB_t)cli_gpio_cmd_dispatch;
-    entry.help_handler = (InterfaceHandlerHelpCB_t)cli_gpio_help; // can be implemented later
+    entry.help_handler = (InterfaceHandlerHelpCB_t)cli_gpio_help;
     int8_t reg_sts = interface_registry_register(&entry);
     if (reg_sts == 0)
     {
