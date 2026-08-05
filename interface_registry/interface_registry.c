@@ -2,6 +2,7 @@
 #include "interface_registry.h"
 #include <string.h>
 
+
 InterfaceRegistryEntry_t interface_registry[INTERFACE_REGISTRY_SIZE];
 
 static void reset_registry_entry(int index);

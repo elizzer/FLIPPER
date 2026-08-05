@@ -10,6 +10,7 @@ typedef enum {
     INTERFACE_I2C,
     INTERFACE_SPI,
     INTERFACE_UART,
+    INTERFACE_PWM,
 } InterfaceId_e;
 
 typedef int8_t (*InterfaceHandlerInitCB_t)(void *);

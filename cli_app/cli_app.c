@@ -3,6 +3,8 @@
 #include "cli_log.h"
 #include "cli_app.h"
 #include "cli_gpio.h"
+#include "cli_pwm.h"
+
 // global variable to store current mode
 
 interface_instance_t interfaces[10]; // global array to hold interface handles
@@ -10,6 +12,7 @@ interface_instance_t interfaces[10]; // global array to hold interface handles
 void app_init(void)
 {
     cli_gpio_register();
+    cli_pwm_register();
     return;
 }
 
@@ -105,7 +108,7 @@ void cmd_create(char *args)
     entry->init(&interfaces[new_inf_idx].inf_handle);
     if (interfaces[new_inf_idx].inf_handle == NULL)
     {
-        LOG_ERR("failed to create interface '%s'", interface);
+        LOG_ERR("failed to create interface '%s', returned NULL handle", interface);
         return;
     }
 
