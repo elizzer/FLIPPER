@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+typedef int8_t Kx_IO;
+
 typedef enum Kx_ErrorCode {
     KX_HAL_OK               = 0,
     KX_HAL_ERR_FAIL         = -1,
