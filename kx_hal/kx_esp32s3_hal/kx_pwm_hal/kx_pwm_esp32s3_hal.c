@@ -7,10 +7,8 @@
 #include "hal/ledc_types.h"
 #include "esp_clk_tree.h"
 
-
-#define KX_PWM_TIMER_COUNT   4
+#define KX_PWM_TIMER_COUNT 4
 #define KX_PWM_CHANNEL_COUNT 4
-
 
 typedef struct channelConfiguration
 {
@@ -19,6 +17,7 @@ typedef struct channelConfiguration
     uint32_t freq_hz;        // frequency in Hz
     uint8_t duty_cycle;      // duty cycle in percentage (0-100)
     Kx_IO pin;               // associated pin for this channel
+    bool is_chInit;          // indicates if the channel is currently active
 } channelConfiguration_t;
 
 // global array to hold the channel configurations (8 channels on ESP32-S3)
@@ -31,6 +30,7 @@ static void reset_channel_config(channelConfiguration_t *cfg)
     cfg->timer_idx = 0; // real timer assignment happens on KxPWM_SetPin()
     cfg->freq_hz = 1000;
     cfg->duty_cycle = 50;
+    cfg->is_chInit = false;
 }
 
 Kx_ErrorCode KxPWM_Init()
@@ -86,15 +86,18 @@ Kx_ErrorCode KxPWM_SetFrequency(Kx_IO pin, uint32_t freq_hz)
     {
         if (g_channel_config[i].pin == pin)
         {
-            esp_err_t err = ledc_set_freq(LEDC_LOW_SPEED_MODE,
-                                           g_channel_config[i].timer_idx,
-                                           freq_hz);
-            if (err != ESP_OK)
+            g_channel_config[i].freq_hz = freq_hz;
+            if (g_channel_config[i].is_chInit)
             {
-                return KX_HAL_ERR_FAIL; // could not set frequency 
+                esp_err_t err = ledc_set_freq(LEDC_LOW_SPEED_MODE,
+                                              g_channel_config[i].timer_idx,
+                                              freq_hz);
+                if (err != ESP_OK)
+                {
+                    return KX_HAL_ERR_FAIL; // could not set frequency
+                }
             }
 
-            g_channel_config[i].freq_hz = freq_hz;
             return KX_HAL_OK;
         }
     }
@@ -112,25 +115,27 @@ Kx_ErrorCode KxPWM_SetDutyCycle(Kx_IO pin, uint8_t duty_cycle)
     {
         if (g_channel_config[i].pin == pin)
         {
-            uint32_t max_duty = (1 << LEDC_TIMER_13_BIT) - 1; // adjust to your configured duty resolution
-            uint32_t raw_duty = (max_duty * duty_cycle) / 100;
-
-            esp_err_t err = ledc_set_duty(LEDC_LOW_SPEED_MODE,
-                                           i,
-                                           raw_duty);
-            if (err != ESP_OK)
-            {
-                return KX_HAL_ERR_FAIL; // could not set duty cycle
-            }
-
-            err = ledc_update_duty(LEDC_LOW_SPEED_MODE,
-                                    i);
-            if (err != ESP_OK)
-            {
-                return KX_HAL_ERR_FAIL; // could not update duty cycle
-            }
-
             g_channel_config[i].duty_cycle = duty_cycle;
+            if (g_channel_config[i].is_chInit)
+            {
+                uint32_t max_duty = (1 << LEDC_TIMER_13_BIT) - 1; // adjust to your configured duty resolution
+                uint32_t raw_duty = (max_duty * duty_cycle) / 100;
+
+                esp_err_t err = ledc_set_duty(LEDC_LOW_SPEED_MODE,
+                                              i,
+                                              raw_duty);
+                if (err != ESP_OK)
+                {
+                    return KX_HAL_ERR_FAIL; // could not set duty cycle
+                }
+
+                err = ledc_update_duty(LEDC_LOW_SPEED_MODE,
+                                       i);
+                if (err != ESP_OK)
+                {
+                    return KX_HAL_ERR_FAIL; // could not update duty cycle
+                }
+            }
             return KX_HAL_OK;
         }
     }
@@ -177,7 +182,7 @@ Kx_ErrorCode KxPWM_Start(Kx_IO pin)
             // on this clock source
             return KX_HAL_ERR_INVALID_ARG;
         }
-        LOG_INFO("Best duty resolution is %d bits", (int)resolution);
+        LOG_INFO("Best duty resolution is %d bits for frequency %d Hz", (int)resolution, (int)g_channel_config[i].freq_hz);
         g_channel_config[i].duty_resolution = (uint8_t)resolution;
 
         /*
@@ -201,6 +206,7 @@ Kx_ErrorCode KxPWM_Start(Kx_IO pin)
         {
             return KX_HAL_ERR_INVALID_ARG;
         }
+        g_channel_config[i].is_chInit = true;
 
         // set the duty cycle in the hardware register
         uint32_t max_duty = (1u << g_channel_config[i].duty_resolution) - 1;
