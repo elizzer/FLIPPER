@@ -8,7 +8,8 @@
 #include "soc/gpio_sig_map.h"
 #include "esp_private/periph_ctrl.h"
 #include "esp_rom_gpio.h"
-
+#include <stdio.h>
+#include "esp_timer.h"
 #include <stdint.h>
 
 #define FI2C_SCLK 40000000U
@@ -74,25 +75,44 @@ Kx_ErrorCode kx_i2c_deinit()
     return KX_HAL_OK;
 }
 
-Kx_ErrorCode i2c_alloc_instance(KxI2C_Handle_t *handle)
+Kx_ErrorCode i2c_alloc_instance(KxI2C_Handle_t *handle, int8_t instance)
 {
 
     // validate the handle not null
+    if (handle == NULL)
+    {
+        return KX_HAL_ERR_INVALID_ARG;
+    }
 
     // loop and get an free instance
     uint8_t free_idx = KX_I2C_INSTANCE_MAX;
-    for (uint8_t s_idx = 0; s_idx < KX_I2C_INSTANCE_MAX; s_idx++)
+    if (instance >= 0 && instance < KX_I2C_INSTANCE_MAX)
     {
-        if (g_i2c_instances[s_idx].is_used == false)
+        printf("Allocating I2C instance %d\n", instance);
+        if (g_i2c_instances[instance].is_used == false)
         {
-            free_idx = s_idx;
-            break;
+            free_idx = instance;
+        }
+        else
+        {
+            return KX_HAL_ERR_BUSY;
         }
     }
-
-    if (free_idx == KX_I2C_INSTANCE_MAX)
+    else
     {
-        return KX_HAL_ERR_FAIL;
+
+        for (uint8_t s_idx = 0; s_idx < KX_I2C_INSTANCE_MAX; s_idx++)
+        {
+            if (g_i2c_instances[s_idx].is_used == false)
+            {
+                free_idx = s_idx;
+                break;
+            }
+        }
+        if (free_idx == KX_I2C_INSTANCE_MAX)
+        {
+            return KX_HAL_ERR_FAIL;
+        }
     }
 
     i2c_port_t t_port = (i2c_port_t)g_i2c_instances[free_idx].instance;
@@ -110,6 +130,8 @@ Kx_ErrorCode i2c_alloc_instance(KxI2C_Handle_t *handle)
     g_i2c_instances[free_idx].is_used = true;
     g_i2c_instances[free_idx].is_initialized = true;
 
+    *handle = &g_i2c_instances[free_idx];
+
     return KX_HAL_OK;
 }
 
@@ -120,6 +142,7 @@ Kx_ErrorCode KxI2C_free_instance(KxI2C_Handle_t handle)
 
 Kx_ErrorCode KxI2C_set_device_mode(KxI2C_Handle_t handle, KxI2C_Mode_t mode)
 {
+    printf("Setting I2C device mode to %s\n", KX_I2C_MODE_MASTER == mode ? "master" : "slave");
     if (KX_I2C_MODE_MASTER == mode)
     {
         i2c_ll_master_init(I2C_LL_GET_HW(handle->instance));
@@ -140,36 +163,60 @@ Kx_ErrorCode KxI2C_set_speed(KxI2C_Handle_t handle, KxI2C_Speed_t speed)
     i2c_dev_t *t_dev = I2C_LL_GET_HW(handle->instance);
 
     i2c_hal_clk_config_t clk_cfg = {0};
+    uint32_t sclk = FI2C_SCLK;
+    uint32_t bus_freq = 0;
+    uint32_t clkm_div = 1;
     // timeout is not enabled for now
     if (KX_I2C_SPEED_STANDARD == speed)
     {
+        printf("Setting I2C speed to standard (100 kHz)\n");
+        bus_freq = 100000;
+        clkm_div = (sclk / (bus_freq * 1024)) + 1;
+    }
+    else if (KX_I2C_SPEED_FAST == speed)
+    {
+        printf("Setting I2C speed to fast (400 kHz)\n");
+        bus_freq = 400000;
+        clkm_div = (sclk / (bus_freq * 1024)) + 1;
+    }
+    else if (KX_I2C_SPEED_FAST_PLUS == speed)
+    {
+        printf("Setting I2C speed to fast plus (1 MHz)\n");
+        bus_freq = 1000000;
+        clkm_div = (sclk / (bus_freq * 1024)) + 1;
+    }
+    else if (KX_I2C_SPEED_HIGH == speed)
+    {
+        printf("Setting I2C speed to high (3.4 MHz)\n");
+        bus_freq = 3400000;
+        clkm_div = (sclk / (bus_freq * 1024)) + 1;
+    }
+    else
+    {
+        return KX_HAL_ERR_INVALID_ARG;
+    }
+    uint32_t half_cycle = (sclk / bus_freq) / 2;
+    if (KX_I2C_MODE_MASTER == handle->device_mode)
+    {
 
-        uint32_t sclk = FI2C_SCLK;
-        uint32_t bus_freq = 100000;
-        uint32_t clkm_div = (sclk / (bus_freq * 1024)) + 1;
-        uint32_t half_cycle = (sclk / bus_freq) / 2;
-        if (KX_I2C_MODE_MASTER == handle->device_mode)
-        {
-
-            clk_cfg.clkm_div = clkm_div;
-            clk_cfg.scl_low = half_cycle;
-            clk_cfg.scl_wait_high = half_cycle / 4;
-            clk_cfg.scl_high = half_cycle * (3 / 4);
-            clk_cfg.setup = half_cycle;
-            clk_cfg.hold = half_cycle;
-            clk_cfg.sda_hold = half_cycle / 4;
-            clk_cfg.sda_sample = half_cycle / 2;
-            clk_cfg.tout = 10;
-        }
-        else if (KX_I2C_MODE_SLAVE == handle->device_mode)
-        {
-            clk_cfg.sda_hold = half_cycle / 4;
-            clk_cfg.sda_sample = half_cycle / 2;
-        }
-        else
-        {
-            return KX_HAL_ERR_FAIL;
-        }
+        clk_cfg.clkm_div = clkm_div;
+        clk_cfg.scl_low = half_cycle;
+        clk_cfg.scl_wait_high = half_cycle / 4;
+        clk_cfg.scl_high = half_cycle * (3 / 4);
+        clk_cfg.setup = half_cycle;
+        clk_cfg.hold = half_cycle;
+        clk_cfg.sda_hold = half_cycle / 4;
+        clk_cfg.sda_sample = half_cycle / 2;
+        clk_cfg.tout = 10;
+    }
+    else if (KX_I2C_MODE_SLAVE == handle->device_mode)
+    {
+        clk_cfg.sda_hold = half_cycle / 4;
+        clk_cfg.sda_sample = half_cycle / 2;
+    }
+    else
+    {
+        return KX_HAL_ERR_FAIL;
     }
     i2c_ll_master_set_bus_timing(t_dev, &clk_cfg);
     return KX_HAL_OK;
@@ -229,6 +276,52 @@ Kx_ErrorCode KxI2C_set_slave_addr(KxI2C_Handle_t handle, KxI2C_AddrMode_t addr_m
 
 Kx_ErrorCode KxI2C_probe(KxI2C_Handle_t handle, uint16_t addr)
 {
+    // send a start condition, send the address with write bit, and check for ack
+    i2c_dev_t *t_dev = I2C_LL_GET_HW(handle->instance);
+    t_dev->fifo_conf.tx_fifo_rst = 1;
+    t_dev->fifo_conf.tx_fifo_rst = 0;
+    t_dev->fifo_conf.nonfifo_en = 1;
+    t_dev->txfifo_mem[0] = ((uint8_t)addr << 1) & 0xFE; // write address with write bit
+    kx_i2c_hal_command_reg_t cmd;
+
+    cmd.val = 0;
+    cmd.op_code = 6; //
+    t_dev->comd[0].val = cmd.val;
+
+    // write
+    cmd.val = 0;
+    cmd.op_code = 1;
+    cmd.ack_en = 1;
+    cmd.ack_exp = 0; // expect ack
+    cmd.byte_num = 1;
+    t_dev->comd[1].val = cmd.val;
+
+    // stop
+    cmd.val = 0;
+    cmd.op_code = 2;
+    t_dev->comd[2].val = cmd.val;
+
+    i2c_ll_master_trans_start(t_dev);
+
+    int32_t start_us = esp_timer_get_time();
+    const int32_t timeout_us = 10000; // 10ms is generous for a single-byte transfer at 100kHz
+
+    while (!(t_dev->int_raw.trans_complete_int_raw || t_dev->int_raw.nack_int_raw))
+    {
+        if (esp_timer_get_time() - start_us > timeout_us)
+        {
+            t_dev->int_clr.val = t_dev->int_raw.val;
+            return KX_HAL_ERR_TIMEOUT; // add this error code if you don't have one
+        }
+    }
+
+    if (t_dev->int_raw.nack_int_raw)
+    {
+        t_dev->int_clr.val = t_dev->int_raw.val;
+        return KX_HAL_ERR_FAIL;
+    }
+
+    t_dev->int_clr.val = t_dev->int_raw.val;
     return KX_HAL_OK;
 }
 
@@ -244,27 +337,30 @@ Kx_ErrorCode KxI2C_master_write(KxI2C_Handle_t handle, uint16_t s_addr, uint8_t 
     // cleare the fifo before writing
     t_dev->fifo_conf.tx_fifo_rst = 1;
     // for every write the data is written from the start
-    memcpy(t_dev->txfifo_mem, data, length);
+    t_dev->txfifo_mem[0] = (s_addr << 1); // write address with write bit
+    // memcpy(t_dev->txfifo_mem + 1, data, length);
+    i2c_ll_write_txfifo(t_dev, data, length);
 
     // now fill the command registers with the write commands
-    kx_i2c_hal_command_reg_t cmd ;
+    kx_i2c_hal_command_reg_t cmd;
 
     cmd.val = 0;
-    cmd.op_code = 6; // 
+    cmd.op_code = 6; //
     t_dev->comd[0].val = cmd.val;
-    
-    //write
+
+    // write
     cmd.val = 0;
-    cmd.op_code = 1; 
+    cmd.op_code = 1;
     cmd.byte_num = length > 32 ? 32 : length;
     t_dev->comd[1].val = cmd.val;
-    
-    //stop
+
+    // stop
     cmd.val = 0;
     cmd.op_code = 2;
     t_dev->comd[2].val = cmd.val;
-    
+
     i2c_ll_master_trans_start(t_dev);
-    
+    printf("Starting I2C write transfer to slave address 0x%02X with %d bytes\n", s_addr, length);
+
     return KX_HAL_OK;
 }

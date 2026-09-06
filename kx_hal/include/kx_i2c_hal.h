@@ -45,7 +45,7 @@ typedef KxI2C_ChannelConfig_t* KxI2C_Handle_t;
 
 Kx_ErrorCode kx_i2c_init();
 Kx_ErrorCode kx_i2c_deinit();
-Kx_ErrorCode i2c_alloc_instance(KxI2C_Handle_t *handle);
+Kx_ErrorCode i2c_alloc_instance(KxI2C_Handle_t *handle, int8_t instance);
 Kx_ErrorCode KxI2C_free_instance(KxI2C_Handle_t handle);
 Kx_ErrorCode KxI2C_set_device_mode(KxI2C_Handle_t handle, KxI2C_Mode_t mode);
 Kx_ErrorCode KxI2C_set_speed(KxI2C_Handle_t handle, KxI2C_Speed_t speed);
@@ -55,6 +55,8 @@ Kx_ErrorCode KxI2C_set_slave_addr(KxI2C_Handle_t handle, KxI2C_AddrMode_t addr_m
 Kx_ErrorCode KxI2C_probe(KxI2C_Handle_t handle, uint16_t addr);
 Kx_ErrorCode KxI2C_master_read(KxI2C_Handle_t handle, uint16_t s_addr, uint8_t* data, size_t length);
 Kx_ErrorCode KxI2C_master_write(KxI2C_Handle_t handle, uint16_t s_addr, uint8_t* data, size_t length);
+Kx_ErrorCode KxI2C_slave_read(KxI2C_Handle_t handle, uint8_t* data, size_t length);
+Kx_ErrorCode KxI2C_slave_write(KxI2C_Handle_t handle, uint8_t* data, size_t length);
 
 
 #endif // KX_I2C_HAL_H
