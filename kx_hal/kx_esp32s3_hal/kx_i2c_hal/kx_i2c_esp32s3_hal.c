@@ -142,6 +142,7 @@ Kx_ErrorCode KxI2C_free_instance(KxI2C_Handle_t handle)
 
 Kx_ErrorCode KxI2C_set_device_mode(KxI2C_Handle_t handle, KxI2C_Mode_t mode)
 {
+
     printf("Setting I2C device mode to %s\n", KX_I2C_MODE_MASTER == mode ? "master" : "slave");
     if (KX_I2C_MODE_MASTER == mode)
     {
@@ -202,12 +203,32 @@ Kx_ErrorCode KxI2C_set_speed(KxI2C_Handle_t handle, KxI2C_Speed_t speed)
         clk_cfg.clkm_div = clkm_div;
         clk_cfg.scl_low = half_cycle;
         clk_cfg.scl_wait_high = half_cycle / 4;
-        clk_cfg.scl_high = half_cycle * (3 / 4);
+        clk_cfg.scl_high = half_cycle * 0.75;
         clk_cfg.setup = half_cycle;
         clk_cfg.hold = half_cycle;
         clk_cfg.sda_hold = half_cycle / 4;
         clk_cfg.sda_sample = half_cycle / 2;
         clk_cfg.tout = 10;
+
+        printf("I2C Clock Config:\n"
+               "  clkm_div    = %u\n"
+               "  scl_low     = %u\n"
+               "  scl_wait_high = %u\n"
+               "  scl_high    = %u\n"
+               "  setup       = %u\n"
+               "  hold        = %u\n"
+               "  sda_hold    = %u\n"
+               "  sda_sample  = %u\n"
+               "  tout        = %u\n",
+               (unsigned)clk_cfg.clkm_div,
+               (unsigned)clk_cfg.scl_low,
+               (unsigned)clk_cfg.scl_wait_high,
+               (unsigned)clk_cfg.scl_high,
+               (unsigned)clk_cfg.setup,
+               (unsigned)clk_cfg.hold,
+               (unsigned)clk_cfg.sda_hold,
+               (unsigned)clk_cfg.sda_sample,
+               (unsigned)clk_cfg.tout);
     }
     else if (KX_I2C_MODE_SLAVE == handle->device_mode)
     {
@@ -278,8 +299,8 @@ Kx_ErrorCode KxI2C_probe(KxI2C_Handle_t handle, uint16_t addr)
 {
     // send a start condition, send the address with write bit, and check for ack
     i2c_dev_t *t_dev = I2C_LL_GET_HW(handle->instance);
-    t_dev->fifo_conf.tx_fifo_rst = 1;
-    t_dev->fifo_conf.tx_fifo_rst = 0;
+
+    i2c_ll_txfifo_rst(t_dev);
     t_dev->fifo_conf.nonfifo_en = 1;
     t_dev->txfifo_mem[0] = ((uint8_t)addr << 1) & 0xFE; // write address with write bit
     kx_i2c_hal_command_reg_t cmd;
@@ -301,6 +322,11 @@ Kx_ErrorCode KxI2C_probe(KxI2C_Handle_t handle, uint16_t addr)
     cmd.op_code = 2;
     t_dev->comd[2].val = cmd.val;
 
+    i2c_ll_enable_intr_mask(t_dev, I2C_LL_MASTER_EVENT_INTR);
+    i2c_ll_clear_intr_mask(t_dev, I2C_LL_MASTER_EVENT_INTR);
+
+    i2c_ll_update(t_dev);
+    // print the intr enable register
     i2c_ll_master_trans_start(t_dev);
 
     int32_t start_us = esp_timer_get_time();
@@ -317,29 +343,33 @@ Kx_ErrorCode KxI2C_probe(KxI2C_Handle_t handle, uint16_t addr)
 
     if (t_dev->int_raw.nack_int_raw)
     {
+        uint32_t raw = t_dev->int_raw.val;
+
         t_dev->int_clr.val = t_dev->int_raw.val;
         return KX_HAL_ERR_FAIL;
     }
 
     t_dev->int_clr.val = t_dev->int_raw.val;
+    i2c_ll_disable_intr_mask(t_dev, I2C_LL_MASTER_EVENT_INTR);
+    i2c_ll_clear_intr_mask(t_dev, I2C_LL_MASTER_EVENT_INTR);
     return KX_HAL_OK;
 }
 
 Kx_ErrorCode KxI2C_master_read(KxI2C_Handle_t handle, uint16_t s_addr, uint8_t *data, size_t length)
 {
-    return KX_HAL_OK;
-}
-Kx_ErrorCode KxI2C_master_write(KxI2C_Handle_t handle, uint16_t s_addr, uint8_t *data, size_t length)
-{
-    // put the data into the fifo and start the transfer
     i2c_dev_t *t_dev = I2C_LL_GET_HW(handle->instance);
 
-    // cleare the fifo before writing
+    // reset the fifo before reading
+
+    t_dev->fifo_conf.rx_fifo_rst = 1;
+    t_dev->fifo_conf.rx_fifo_rst = 0;
     t_dev->fifo_conf.tx_fifo_rst = 1;
-    // for every write the data is written from the start
-    t_dev->txfifo_mem[0] = (s_addr << 1); // write address with write bit
-    // memcpy(t_dev->txfifo_mem + 1, data, length);
-    i2c_ll_write_txfifo(t_dev, data, length);
+    t_dev->fifo_conf.tx_fifo_rst = 0;
+
+    uint8_t addr_byte = s_addr << 1;
+    t_dev->fifo_conf.nonfifo_en = 0;
+
+    i2c_ll_write_txfifo(t_dev, &addr_byte, 1);
 
     // now fill the command registers with the write commands
     kx_i2c_hal_command_reg_t cmd;
@@ -351,6 +381,97 @@ Kx_ErrorCode KxI2C_master_write(KxI2C_Handle_t handle, uint16_t s_addr, uint8_t 
     // write
     cmd.val = 0;
     cmd.op_code = 1;
+    cmd.byte_num = 1;
+    cmd.ack_en = 1;
+    cmd.ack_exp = 0;
+    t_dev->comd[1].val = cmd.val;
+
+    // read n byte
+    cmd.val = 0;
+    cmd.op_code = 3;
+    cmd.byte_num = length;
+    t_dev->comd[2].val = cmd.val;
+
+    // stop
+    cmd.val = 0;
+    cmd.op_code = 2;
+    t_dev->comd[3].val = cmd.val;
+
+    i2c_ll_enable_intr_mask(t_dev, I2C_LL_MASTER_EVENT_INTR);
+    i2c_ll_clear_intr_mask(t_dev, I2C_LL_MASTER_EVENT_INTR);
+
+    i2c_ll_update(t_dev);
+
+    i2c_ll_master_trans_start(t_dev);
+
+    // wait for transfer to complete
+    int32_t start_us = esp_timer_get_time();
+    const int32_t timeout_us = 10000; // 10ms is generous for a single-byte transfer at 100kHz
+
+    while (!(t_dev->int_raw.trans_complete_int_raw || t_dev->int_raw.nack_int_raw))
+    {
+        if (esp_timer_get_time() - start_us > timeout_us)
+        {
+            t_dev->int_clr.val = t_dev->int_raw.val;
+            printf("\n\rRead operation filed, transfer timeout");
+            return KX_HAL_ERR_TIMEOUT; // add this error code if you don't have one
+        }
+    }
+
+    if (t_dev->int_raw.nack_int_raw)
+    {
+        t_dev->int_clr.val = t_dev->int_raw.val;
+        printf("\n\rTransfer fail received NACK");
+
+        // loop throught all commands and check their status
+        for (uint8_t i = 0; i < 4; i++)
+        {
+            printf("\n\rCommand %d status: %d", i, t_dev->comd->command_done ? 1 : 0);
+        }
+        return KX_HAL_ERR_FAIL;
+    }
+
+    t_dev->int_clr.val = t_dev->int_raw.val;
+    i2c_ll_disable_intr_mask(t_dev, I2C_LL_MASTER_EVENT_INTR);
+    i2c_ll_clear_intr_mask(t_dev, I2C_LL_MASTER_EVENT_INTR);
+    printf("\n\rI2C Read completed");
+
+    i2c_ll_read_rxfifo(t_dev, data, length);
+
+    for (uint8_t i = 0; i < length; i++)
+    {
+        printf("\n\r0x%x", data[i]);
+    }
+
+    return KX_HAL_OK;
+}
+Kx_ErrorCode KxI2C_master_write(KxI2C_Handle_t handle, uint16_t s_addr, uint8_t *data, size_t length)
+{
+    // put the data into the fifo and start the transfer
+    i2c_dev_t *t_dev = I2C_LL_GET_HW(handle->instance);
+
+    // cleare the fifo before writing
+    t_dev->fifo_conf.tx_fifo_rst = 1;
+    t_dev->fifo_conf.tx_fifo_rst = 0;
+    // for every write the data is written from the start
+    uint8_t addr_byte = s_addr << 1;
+    t_dev->fifo_conf.nonfifo_en = 0;
+
+    i2c_ll_write_txfifo(t_dev, &addr_byte, 1);
+    i2c_ll_write_txfifo(t_dev, data, length);
+
+    printf("\n\rTX RAM is ready");
+    // now fill the command registers with the write commands
+    kx_i2c_hal_command_reg_t cmd;
+
+    cmd.val = 0;
+    cmd.op_code = 6; //
+    t_dev->comd[0].val = cmd.val;
+
+    length = length + 1;
+    // write
+    cmd.val = 0;
+    cmd.op_code = 1;
     cmd.byte_num = length > 32 ? 32 : length;
     t_dev->comd[1].val = cmd.val;
 
@@ -359,8 +480,38 @@ Kx_ErrorCode KxI2C_master_write(KxI2C_Handle_t handle, uint16_t s_addr, uint8_t 
     cmd.op_code = 2;
     t_dev->comd[2].val = cmd.val;
 
+    i2c_ll_enable_intr_mask(t_dev, I2C_LL_MASTER_EVENT_INTR);
+    i2c_ll_clear_intr_mask(t_dev, I2C_LL_MASTER_EVENT_INTR);
+
+    i2c_ll_update(t_dev);
+
+    printf("\n\rStarting I2C write transfer to slave address 0x%02X with %d bytes", s_addr, length);
     i2c_ll_master_trans_start(t_dev);
-    printf("Starting I2C write transfer to slave address 0x%02X with %d bytes\n", s_addr, length);
+
+    // wait for transfer to complete
+    int32_t start_us = esp_timer_get_time();
+    const int32_t timeout_us = 10000; // 10ms is generous for a single-byte transfer at 100kHz
+
+    while (!(t_dev->int_raw.trans_complete_int_raw || t_dev->int_raw.nack_int_raw))
+    {
+        if (esp_timer_get_time() - start_us > timeout_us)
+        {
+            t_dev->int_clr.val = t_dev->int_raw.val;
+            printf("\n\rRead operation filed, transfer timeout");
+            return KX_HAL_ERR_TIMEOUT; // add this error code if you don't have one
+        }
+    }
+
+    if (t_dev->int_raw.nack_int_raw)
+    {
+        t_dev->int_clr.val = t_dev->int_raw.val;
+        printf("\n\rTransfer fail received NACK");
+        return KX_HAL_ERR_FAIL;
+    }
+
+    t_dev->int_clr.val = t_dev->int_raw.val;
+    i2c_ll_disable_intr_mask(t_dev, I2C_LL_MASTER_EVENT_INTR);
+    i2c_ll_clear_intr_mask(t_dev, I2C_LL_MASTER_EVENT_INTR);
 
     return KX_HAL_OK;
 }
