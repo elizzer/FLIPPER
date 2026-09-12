@@ -32,6 +32,11 @@ void cmd_help(char *args)
         printf("\r\n--- Karuvi X CLI Commands ---\r\n");
         printf("  hello <name>                 - Print a greeting\r\n");
         printf("  print_banner                 - Show the startup banner\r\n");
+        printf("  time                         - Show uptime since boot\r\n");
+        printf("  sysinfo                      - Show chip and heap information\r\n");
+        printf("  temp                         - Show chip temperature\r\n");
+        printf("  panic                        - Break me on purpose and trigger fault handling\r\n");
+        printf("  all                          - Show uptime and system info\r\n");
         printf("  create <interface> <name>    - Create a named interface instance\r\n");
         printf("                                  e.g. create gpio io1\r\n");
         printf("  use <name> <cmd> [args]      - Run a command on a created interface\r\n");
