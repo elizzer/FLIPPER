@@ -6,26 +6,28 @@
 #include "cli_log.h"
 #include "cli_app.h"
 
-
 typedef int8_t (*pwm_cmd_func_t)(cliPWMHandle_t, char *);
 
-//define to check not null handle
-#define CHECK_HANDLE_NULL(handle) \
-    do { \
-        if (handle == NULL) { \
+// define to check not null handle
+#define CHECK_HANDLE_NULL(handle)      \
+    do                                 \
+    {                                  \
+        if (handle == NULL)            \
+        {                              \
             LOG_ERR("Handle is NULL"); \
-            return -1; \
-        } \
+            return -1;                 \
+        }                              \
     } while (0)
 
 cmdEntry_t pwm_cmds[] = {
-    {"set_pin", (generic_fp_t)cli_pwm_set_pin,               "set_pin <IO_x>                        : Set active PWM pin (e.g. set_pin IO_5)"},
-    {"set_freq_hz", (generic_fp_t)cli_pwm_set_freq,          "set_freq_hz <freq_hz>                 : Set PWM frequency in Hz"},
-    {"get_freq_hz", (generic_fp_t)cli_pwm_get_freq,          "get_freq_hz                           : Print current PWM frequency in Hz"},
+    {"set_pin", (generic_fp_t)cli_pwm_set_pin, "set_pin <IO_x>                        : Set active PWM pin (e.g. set_pin IO_5)"},
+    {"set_freq_hz", (generic_fp_t)cli_pwm_set_freq_hz, "set_freq_hz <freq_hz>                 : Set PWM frequency in Hz"},
+    {"set_freq_Mhz", (generic_fp_t)cli_pwm_set_freq_Mhz, "set_freq_Mhz <freq_Mhz>               : Set PWM frequency in MHz"},
+    {"get_freq_hz", (generic_fp_t)cli_pwm_get_freq, "get_freq_hz                           : Print current PWM frequency in Hz"},
     {"set_duty_cycle", (generic_fp_t)cli_pwm_set_duty_cycle, "set_duty_cycle <0-100>                : Set PWM duty cycle in percent"},
     {"get_duty_cycle", (generic_fp_t)cli_pwm_get_duty_cycle, "get_duty_cycle                        : Print current PWM duty cycle in percent"},
-    {"start", (generic_fp_t)cli_pwm_start,                   "start                                  : Start PWM output on active pin"},
-    {"stop", (generic_fp_t)cli_pwm_stop,                     "stop                                   : Stop PWM output on active pin"},
+    {"start", (generic_fp_t)cli_pwm_start, "start                                  : Start PWM output on active pin"},
+    {"stop", (generic_fp_t)cli_pwm_stop, "stop                                   : Stop PWM output on active pin"},
     {"", NULL, ""} // sentinel
 };
 
@@ -59,7 +61,7 @@ int8_t cli_pwm_init(cliPWMHandle_t *handle)
     if (KX_HAL_OK == init_sts)
     {
         LOG_INFO("CLI PWM initialization success");
-        //create a handle and return it
+        // create a handle and return it
         *handle = (cliPWMHandle_t)malloc(sizeof(cliPWMConfig_t));
         memset(*handle, 0, sizeof(cliPWMConfig_t));
         (*handle)->IO_pin = -1; // assuming -1 is an invalid pin
@@ -118,11 +120,12 @@ int8_t cli_pwm_cmd_dispatch(cliPWMHandle_t handle, const char *cmd)
     return 0;
 }
 
-int8_t cli_pwm_set_pin(cliPWMHandle_t handle, char *args){
+int8_t cli_pwm_set_pin(cliPWMHandle_t handle, char *args)
+{
     CHECK_HANDLE_NULL(handle);
     // Implementation for setting PWM pin
     Kx_ErrorCode retVal = KxPWM_SetPin((Kx_IO)atoi(args));
-    if(retVal == KX_HAL_ERR_BUSY)
+    if (retVal == KX_HAL_ERR_BUSY)
     {
         LOG_ERR("Pin is already configured or invalid");
         return KX_HAL_ERR_FAIL;
@@ -137,7 +140,8 @@ int8_t cli_pwm_set_pin(cliPWMHandle_t handle, char *args){
 
     return KX_HAL_OK;
 }
-int8_t cli_pwm_set_freq(cliPWMHandle_t handle, char *args){
+int8_t cli_pwm_set_freq_hz(cliPWMHandle_t handle, char *args)
+{
     CHECK_HANDLE_NULL(handle);
     // Implementation for setting PWM frequency
     Kx_ErrorCode retVal = KxPWM_SetFrequency(handle->IO_pin, (uint32_t)atoi(args));
@@ -149,10 +153,25 @@ int8_t cli_pwm_set_freq(cliPWMHandle_t handle, char *args){
 
     return KX_HAL_OK;
 }
-int8_t cli_pwm_get_freq(cliPWMHandle_t handle, char *args){
+int8_t cli_pwm_set_freq_Mhz(cliPWMHandle_t handle, char *args)
+{
+    CHECK_HANDLE_NULL(handle);
+    // Implementation for setting PWM frequency
+    Kx_ErrorCode retVal = KxPWM_SetFrequency(handle->IO_pin, (uint32_t)(atof(args) * 1000000));
+    if (retVal != KX_HAL_OK)
+    {
+        LOG_ERR("Unable to set the PWM frequency");
+        return KX_HAL_ERR_FAIL;
+    }
+
+    return KX_HAL_OK;
+}
+int8_t cli_pwm_get_freq(cliPWMHandle_t handle, char *args)
+{
     return -1; // Not implemented yet
 }
-int8_t cli_pwm_set_duty_cycle(cliPWMHandle_t handle, char *args){
+int8_t cli_pwm_set_duty_cycle(cliPWMHandle_t handle, char *args)
+{
     CHECK_HANDLE_NULL(handle);
     // Implementation for setting PWM duty cycle
     Kx_ErrorCode retVal = KxPWM_SetDutyCycle(handle->IO_pin, (uint8_t)atoi(args));
@@ -164,10 +183,12 @@ int8_t cli_pwm_set_duty_cycle(cliPWMHandle_t handle, char *args){
 
     return KX_HAL_OK;
 }
-int8_t cli_pwm_get_duty_cycle(cliPWMHandle_t handle, char *args){
+int8_t cli_pwm_get_duty_cycle(cliPWMHandle_t handle, char *args)
+{
     return -1; // Not implemented yet
 }
-int8_t cli_pwm_start(cliPWMHandle_t handle, char *args){
+int8_t cli_pwm_start(cliPWMHandle_t handle, char *args)
+{
     CHECK_HANDLE_NULL(handle);
     // Implementation for starting PWM
     Kx_ErrorCode retVal = KxPWM_Start(handle->IO_pin);
@@ -178,7 +199,8 @@ int8_t cli_pwm_start(cliPWMHandle_t handle, char *args){
     }
     return 0;
 }
-int8_t cli_pwm_stop(cliPWMHandle_t handle, char *args){
+int8_t cli_pwm_stop(cliPWMHandle_t handle, char *args)
+{
     CHECK_HANDLE_NULL(handle);
     // Implementation for stopping PWM
     Kx_ErrorCode retVal = KxPWM_Stop(handle->IO_pin);
@@ -189,7 +211,8 @@ int8_t cli_pwm_stop(cliPWMHandle_t handle, char *args){
     }
     return KX_HAL_OK;
 }
-int8_t cli_pwm_reset(cliPWMHandle_t handle, char *args){
+int8_t cli_pwm_reset(cliPWMHandle_t handle, char *args)
+{
     CHECK_HANDLE_NULL(handle);
     // Implementation for resetting PWM
     return 0;
