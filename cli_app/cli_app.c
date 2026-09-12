@@ -4,6 +4,8 @@
 #include "cli_app.h"
 #include "cli_gpio.h"
 #include "cli_pwm.h"
+#include "cli_i2c.h"
+
 
 // global variable to store current mode
 
