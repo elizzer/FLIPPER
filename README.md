@@ -1,118 +1,189 @@
-# KaruviX
+# KaruviX ESP32 CLI
 
-*Tool for eXploration*
+KaruviX is an ESP32-S3 firmware project that exposes a UART-driven command-line interface for creating and controlling hardware interface instances. The project is built around a registry-based module system so new interfaces can be added without changing the core CLI flow.
 
-A lightweight ESP32-S3 firmware project that exposes a UART-driven
-command-line interface for creating and controlling hardware interface
-instances. The current prototype focuses on GPIO support and is designed
-to grow into a modular, extensible toolkit for embedded experimentation
-and hardware debugging. This repository is intended to be the first step
-of a larger project that will be built upon once the CLI application
-reaches a useful and stable stage.
+## What this project does
 
-## Why this exists
+The firmware starts a serial console and accepts commands over UART. The CLI supports a small set of core commands as well as interface-specific commands for hardware modules.
 
-Most hardware debugging and prototyping tools — logic analyzers, protocol
-interfaces, GPIO/bus testers, power profilers — are either expensive,
-closed-source, or require installing vendor-specific desktop software.
-That's a real barrier for anyone learning or working with embedded
-systems on a budget, especially without access to a full bench of lab
-equipment.
+Current interface modules include:
 
-This project explores a different approach: put the toolkit on a cheap,
-widely available microcontroller (ESP32-S3) and expose it entirely over
-a serial terminal. No GUI, no drivers, no OS-specific app — just a UART
-connection and any terminal emulator.
+- GPIO
+- PWM
+- I2C
 
-A screen and onboard GUI are a natural extension of this idea, letting
-the toolkit run standalone without a host PC. That isn't a functional
-requirement right now, but the architecture is modular by design, so
-a display/GUI layer can be added later without reworking the core.
-
-The bigger goal is a general-purpose, extensible hardware toolkit rather
-than a single-purpose tool. The same registry-based interface model that
-handles GPIO today is meant to support custom modules for things like:
-
-- Power profiling / current monitoring
-- Wi-Fi debugging and Wi-Fi stub/simulation tooling
-- IR transmit/receive (e.g. as a universal remote)
-- Data acquisition
-- Additional protocol interfaces (I2C, SPI, UART, and beyond)
-
-Each of these can be built as a self-contained interface module and
-registered into the same CLI, without touching the core firmware. This
-repository is the foundation that makes that extensibility possible —
-released early and open because the core architecture is useful on its
-own, and because collaboration from this stage will shape how well it
-generalizes to those future modules.
-
+The interface model is intentionally extensible: each module registers itself in the central interface registry, and instances are created with names at runtime using the create / use pattern.
 
 ## Current status
 
-**Working:**
-- UART-based command loop in the firmware entry point
-- Command parsing and dispatch
-- A registry-based interface model
-- A GPIO interface implementation for basic pin configuration
+This repository is an active prototype and development platform. The core command loop, registry, and several hardware interfaces are implemented and usable, but the project is still evolving and not yet a complete production-grade hardware toolkit.
 
-**Evolving:**
-- More complete command coverage
-- Better validation and error handling
-- More hardware-facing implementations
-- Documentation and examples for real-world use
+Implemented areas:
+
+- UART command loop and command dispatch
+- Core CLI commands such as help, sysinfo, time, reboot, and cls
+- Registry-based interface management
+- GPIO interface with pin, direction, pull, read/write/toggle support
+- PWM interface registration and basic command handling
+- I2C interface registration and basic transaction helpers
+- ESP-IDF build integration
 
 ## Hardware and software requirements
 
-- Target hardware: ESP32-S3
+- Target: ESP32-S3
 - Framework: ESP-IDF
-- Build toolchain: ESP-IDF toolchain installed and configured
+- Toolchain: ESP-IDF installed and configured in your shell environment
+- Serial terminal for UART interaction (for example, minicom, PuTTY, or the ESP-IDF monitor)
 
-## Quick start
+## Build and flash
 
-1. Install ESP-IDF and make sure the environment is configured.
-2. Open the project directory.
-3. Build the firmware:
+From the project root:
 
 ```bash
 idf.py set-target esp32s3
 idf.py build
 ```
 
-4. Flash it to your board:
+Then flash and monitor the device:
 
 ```bash
 idf.py -p <YOUR_PORT> flash monitor
 ```
 
-## Example commands
+If you only want to flash without opening the monitor:
 
-Once the firmware is running, you can try commands like:
+```bash
+idf.py -p <YOUR_PORT> flash
+```
+
+## Command model
+
+The CLI uses a simple runtime pattern:
 
 ```text
-hello world
+create <interface> <name>
+use <name> <command> [args]
+```
+
+Examples:
+
+```text
+help
+help gpio
+create gpio led
+use led set_pin IO_5
+use led set_dir output
+use led get_config
+use led set
+```
+
+The main commands are registered in the application layer:
+
+- print_banner
+- time
+- sysinfo
+- panic
+- all
+- help
+- create
+- use
+- reboot
+- cls / clear
+
+## Supported interface examples
+
+### GPIO
+
+```text
 create gpio io1
 use io1 set_pin IO_5
 use io1 set_dir output
+use io1 set_pull pull_up
+use io1 set
+use io1 read
+use io1 toggle
 use io1 get_config
 ```
 
-## Project structure
+GPIO commands include:
+
+- set_pin <IO_x>
+- get_config
+- set_dir <input|output>
+- set_pull <no_pull|pull_up|pull_down>
+- set
+- clear
+- read
+- toggle
+
+### PWM
+
+```text
+create pwm pwm0
+use pwm0 set_pin 5
+use pwm0 set_freq_hz 1000
+use pwm0 set_duty_cycle 50
+use pwm0 start
+```
+
+PWM commands include:
+
+- set_pin <IO_x>
+- set_freq_hz <freq_hz>
+- set_freq_Mhz <freq_Mhz>
+- get_freq_hz
+- set_duty_cycle <0-100>
+- get_duty_cycle
+- start
+- stop
+
+### I2C
+
+```text
+create i2c bus1
+use bus1 alloc_instance 0
+use bus1 set_sda 17
+use bus1 set_scl 18
+use bus1 set_speed standard
+use bus1 set_mode master
+use bus1 scan
+```
+
+I2C commands include:
+
+- alloc_instance [instance]
+- set_sda <IO_x>
+- set_scl <IO_x>
+- set_addr <addr>
+- set_speed <standard|fast|fast_plus|high>
+- set_mode <master|slave>
+- read <slave_addr> <length>
+- write <addr> <byte0> [byte1 ...]
+- scan
+- probe <slave_addr>
+
+## Repository layout
 
 - [main](main) - Firmware entry point and UART loop
-- [cli_app](cli_app) - Application-level CLI commands
-- [cli_gpio](cli_gpio) - GPIO interface implementation
-- [cmd_parser](cmd_parser) - Simple command parsing logic
-- [interface_registry](interface_registry) - Interface registration and lookup
-- [DESIGN_DOCUMENT.md](DESIGN_DOCUMENT.md) - Architecture notes and design context
+- [cli_app](cli_app) - Core CLI application commands and registration logic
+- [cli_gpio](cli_gpio) - GPIO interface implementation and command table
+- [cli_pwm](cli_pwm) - PWM interface implementation and command table
+- [cli_i2c](cli_i2c) - I2C interface implementation and command table
+- [cmd_parser](cmd_parser) - Minimal command parsing and dispatch helpers
+- [interface_registry](interface_registry) - Central registry for interface lookup and registration
+- [kx_hal](kx_hal) - HAL-level support layer for hardware abstractions
+- [test](test) - Test scripts and command samples
+- [Release](Release) - Packaging and release helper scripts
 
-## Roadmap
+## Testing and automation
 
-Potential next steps for the project include:
-- Additional interfaces such as I2C, SPI, and UART
-- Better validation for command arguments
-- Improved help text and examples
-- Stability improvements and cleanup for public use
-- A richer demo workflow for hardware testing
+The project includes a simple serial automation script for sending commands from a file:
+
+```bash
+python .\send_cmd.py --port COM12 --baud 115200 --interval 1 --file test_cmds.txt
+```
+
+The file in [test](test) is intended as a quick smoke-test for the UART CLI flow.
 
 ## Contributing
 
