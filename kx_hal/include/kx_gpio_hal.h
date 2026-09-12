@@ -41,7 +41,6 @@ Kx_ErrorCode KxGpio_SetDirection(Kx_GpioPin,Kx_GpioDirection_t);
 Kx_ErrorCode KxGpio_SetPull(Kx_GpioPin,Kx_GpioPull_t);
 Kx_ErrorCode KxGpio_Set(Kx_GpioPin);
 Kx_ErrorCode KxGpio_Clear(Kx_GpioPin);
-Kx_ErrorCode KxGpio_Toggle(Kx_GpioPin);
 Kx_ErrorCode KxGpio_Read(Kx_GpioPin, Kx_GpioState_t*);
 
 //register intrupt

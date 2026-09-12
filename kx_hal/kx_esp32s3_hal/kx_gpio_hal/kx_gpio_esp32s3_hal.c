@@ -90,13 +90,4 @@ Kx_ErrorCode KxGpio_Read(Kx_GpioPin pin, Kx_GpioState_t *state)
 
     return KX_HAL_OK;
 }
-Kx_ErrorCode KxGpio_Toggle(Kx_GpioPin pin)
-{
-    int current_level = gpio_get_level((gpio_num_t)pin);
-    esp_err_t err = gpio_set_level((gpio_num_t)pin, !current_level);
-    if (err != ESP_OK) {
-        return KX_HAL_ERR_FAIL;
-    }
-    return KX_HAL_OK;
-}
 

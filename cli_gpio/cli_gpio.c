@@ -45,7 +45,7 @@ int8_t cli_gpio_init(void **handle)
 {
     LOG_INFO("GPOI init");
     // For this simple implementation, we just allocate a struct to hold the config
-    gpioHandle_t gpio = (gpioHandle_t )malloc(sizeof(gpioconfig_t));
+    gpioHandle_t gpio = (gpioHandle_t)malloc(sizeof(gpioconfig_t));
     if (!gpio)
         return -1; // allocation failed
     memset(gpio, 0, sizeof(gpioconfig_t));
@@ -225,6 +225,7 @@ int8_t cli_gpio_set(void *handle, char *args)
         LOG_ERR("Unable to set the pin");
         return KX_HAL_ERR_FAIL;
     }
+    gpio->level = 1;
 
     return KX_HAL_OK;
 }
@@ -249,6 +250,8 @@ int8_t cli_gpio_clear(void *handle, char *args)
         LOG_ERR("Unable to set the pin");
         return KX_HAL_ERR_FAIL;
     }
+
+    gpio->level = 0;
 
     return KX_HAL_OK;
 }
@@ -301,7 +304,33 @@ int8_t cli_gpio_toggle(void *handle, char *args)
     }
 
     Kx_ErrorCode retVal;
-    retVal = KxGpio_Toggle(gpio->pin);
+    // retVal = KxGpio_Toggle(gpio->pin);
+    if (gpio->level == 0)
+    {
+        retVal = KxGpio_Set(gpio->pin);
+        if (retVal != KX_HAL_OK)
+        {
+            LOG_ERR("Unable to set the pin");
+            return KX_HAL_ERR_FAIL;
+        }
+        gpio->level = 1;
+    }
+    else if (gpio->level == 1)
+    {
+        retVal = KxGpio_Clear(gpio->pin);
+        if (retVal != KX_HAL_OK)
+        {
+            LOG_ERR("Unable to set the pin");
+            return KX_HAL_ERR_FAIL;
+        }
+
+        gpio->level = 0;
+    }
+    else
+    {
+        retVal = KX_HAL_ERR_FAIL;
+    }
+
     if (retVal != KX_HAL_OK)
     {
         LOG_ERR("Unable to toggle the pin");
