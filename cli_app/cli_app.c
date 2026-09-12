@@ -13,6 +13,7 @@ void app_init(void)
 {
     cli_gpio_register();
     cli_pwm_register();
+    cli_i2c_register();
     return;
 }
 
