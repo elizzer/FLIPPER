@@ -5,13 +5,13 @@
 #include <string.h>
 
 typedef void (*command_handler_t)(char *args);
-typedef void (*generic_fp_t)(void);
-typedef struct {
+typedef void (*cmd_fp_t)(void *, char *);
+typedef struct
+{
     char key[32];
-    generic_fp_t func;
-    const char* help_str;
+    cmd_fp_t func;
+    const char *help_str;
 } cmdEntry_t;
-
 
 int8_t cmd_dispatch(const char *cmd, cmdEntry_t *table, int table_size);
 int8_t cmd_parse(const char *cmd, char *key, size_t key_size, char *args, size_t args_size);

@@ -13,7 +13,7 @@ typedef enum {
     INTERFACE_PWM,
 } InterfaceId_e;
 
-typedef int8_t (*InterfaceHandlerInitCB_t)(void *);
+typedef int8_t (*InterfaceHandlerInitCB_t)(void **);
 typedef int8_t (*InterfaceHandlerDeInitCB_t)(void *);
 typedef int8_t (*InterfaceHandlerCmdCB_t)(void *, const char *);
 typedef void (*InterfaceHandlerHelpCB_t)();

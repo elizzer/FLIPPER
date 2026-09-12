@@ -18,20 +18,20 @@ typedef cliI2CConfig_t* cliI2CHandle_t;
 
 int8_t cli_i2c_register();
 
-int8_t cli_i2c_init(cliI2CHandle_t* handle);
-int8_t cli_i2c_deinit(cliI2CHandle_t handle);
+int8_t cli_i2c_init(void** handle);
+int8_t cli_i2c_deinit(void* handle);
 void cli_i2c_help();
-int8_t cli_i2c_cmd_dispatch(cliI2CHandle_t handle, const char * cmd);
+int8_t cli_i2c_cmd_dispatch(void* handle, const char * cmd);
 
-int8_t cli_i2c_alloc_instance(cliI2CHandle_t handle,char *args);
-int8_t cli_i2c_set_sda(cliI2CHandle_t handle, char *args);
-int8_t cli_i2c_set_scl(cliI2CHandle_t handle, char *args);
-int8_t cli_i2c_set_addr(cliI2CHandle_t handle, char *args);
-int8_t cli_i2c_set_mode(cliI2CHandle_t handle, char *args);
-int8_t cli_i2c_set_speed(cliI2CHandle_t handle, char *args);
-int8_t cli_i2c_read(cliI2CHandle_t handle, char *args);
-int8_t cli_i2c_write(cliI2CHandle_t handle, char *args);
-int8_t cli_i2c_scan(cliI2CHandle_t handle, char *args);
-int8_t cli_i2c_probe(cliI2CHandle_t handle, char *args);
+int8_t cli_i2c_alloc_instance(void* handle,char *args);
+int8_t cli_i2c_set_sda(void* handle, char *args);
+int8_t cli_i2c_set_scl(void* handle, char *args);
+int8_t cli_i2c_set_addr(void* handle, char *args);
+int8_t cli_i2c_set_mode(void* handle, char *args);
+int8_t cli_i2c_set_speed(void* handle, char *args);
+int8_t cli_i2c_read(void* handle, char *args);
+int8_t cli_i2c_write(void* handle, char *args);
+int8_t cli_i2c_scan(void* handle, char *args);
+int8_t cli_i2c_probe(void* handle, char *args);
 
 #endif //CLI_I2C_H

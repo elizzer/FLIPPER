@@ -18,20 +18,20 @@
 #define LOG_TAG "CLI_I2C"
 
 cmdEntry_t i2c_cmds[] = {
-    {"alloc_instance", (generic_fp_t)cli_i2c_alloc_instance, "alloc_instance [instance]             : Allocate an I2C instance (optional instance number, default: auto)"},
-    {"set_sda", (generic_fp_t)cli_i2c_set_sda, "set_sda <IO_x>                        : Set the SDA GPIO pin"},
-    {"set_scl", (generic_fp_t)cli_i2c_set_scl, "set_scl <IO_x>                        : Set the SCL GPIO pin"},
-    {"set_addr", (generic_fp_t)cli_i2c_set_addr, "set_addr <addr>                       : Set the master device address"},
-    {"set_speed", (generic_fp_t)cli_i2c_set_speed, "set_speed <standard|fast|fast_plus|high> : Set the I2C bus speed"},
-    {"set_mode", (generic_fp_t)cli_i2c_set_mode, "set_mode <master|slave>               : Set the I2C device mode"},
-    {"read", (generic_fp_t)cli_i2c_read, "read <slave_addr> <length>            : Read length bytes from slave_addr"},
-    {"write", (generic_fp_t)cli_i2c_write, "write <addr> <byte0> [byte1 ...]      : Write bytes to slave device"},
-    {"scan", (generic_fp_t)cli_i2c_scan, "scan                                  : Scan the I2C bus for connected devices"},
-    {"probe", (generic_fp_t)cli_i2c_probe, "probe <slave_addr>                    : Check if a device acknowledges at slave_addr"},
+    {"alloc_instance", cli_i2c_alloc_instance, "alloc_instance [instance]             : Allocate an I2C instance (optional instance number, default: auto)"},
+    {"set_sda", cli_i2c_set_sda, "set_sda <IO_x>                        : Set the SDA GPIO pin"},
+    {"set_scl", cli_i2c_set_scl, "set_scl <IO_x>                        : Set the SCL GPIO pin"},
+    {"set_addr", cli_i2c_set_addr, "set_addr <addr>                       : Set the master device address"},
+    {"set_speed", cli_i2c_set_speed, "set_speed <standard|fast|fast_plus|high> : Set the I2C bus speed"},
+    {"set_mode", cli_i2c_set_mode, "set_mode <master|slave>               : Set the I2C device mode"},
+    {"read", cli_i2c_read, "read <slave_addr> <length>            : Read length bytes from slave_addr"},
+    {"write", cli_i2c_write, "write <addr> <byte0> [byte1 ...]      : Write bytes to slave device"},
+    {"scan", cli_i2c_scan, "scan                                  : Scan the I2C bus for connected devices"},
+    {"probe", cli_i2c_probe, "probe <slave_addr>                    : Check if a device acknowledges at slave_addr"},
     {"", NULL, ""} // sentinel
 };
 
-typedef int8_t (*i2c_cmd_func_t)(cliI2CHandle_t, char *);
+typedef int8_t (*i2c_cmd_func_t)(void *, char *);
 
 int8_t cli_i2c_register()
 {
@@ -39,10 +39,10 @@ int8_t cli_i2c_register()
     InterfaceRegistryEntry_t entry;
     entry.id = INTERFACE_I2C;
     strcpy(entry.name, "i2c");
-    entry.init = (InterfaceHandlerInitCB_t)cli_i2c_init;
-    entry.de_init = (InterfaceHandlerDeInitCB_t)cli_i2c_deinit;
-    entry.cmd_handler = (InterfaceHandlerCmdCB_t)cli_i2c_cmd_dispatch;
-    entry.help_handler = (InterfaceHandlerHelpCB_t)cli_i2c_help;
+    entry.init = cli_i2c_init;
+    entry.de_init = cli_i2c_deinit;
+    entry.cmd_handler = cli_i2c_cmd_dispatch;
+    entry.help_handler = cli_i2c_help;
     int8_t reg_sts = interface_registry_register(&entry);
     if (reg_sts == 0)
     {
@@ -56,25 +56,28 @@ int8_t cli_i2c_register()
     }
 }
 
-int8_t cli_i2c_init(cliI2CHandle_t *handle)
+int8_t cli_i2c_init(void **handle)
 {
-    // create a hanlde, and set default values
-    *handle = (cliI2CHandle_t)malloc(sizeof(cliI2CConfig_t));
     if (*handle == NULL)
     {
         LOG_ERR("Failed to allocate memory for I2C handle");
         return KX_HAL_ERR_FAIL;
     }
-    memset(*handle, 0, sizeof(cliI2CConfig_t));
-    (*handle)->sda_pin = -1;                  // assuming -1 is an invalid pin
-    (*handle)->scl_pin = -1;                  // assuming -1 is an invalid pin
-    (*handle)->addr = 0x00;                   // default address
-    (*handle)->speed = KX_I2C_SPEED_STANDARD; // default frequency 100kHz
-    (*handle)->mode = KX_I2C_MODE_MASTER;     // default mode
+    // create a hanlde, and set default values
+    cliI2CHandle_t i2c = (cliI2CHandle_t)malloc(sizeof(cliI2CConfig_t));
+    memset(i2c, 0, sizeof(cliI2CConfig_t));
+    i2c->sda_pin = -1;                  // assuming -1 is an invalid pin
+    i2c->scl_pin = -1;                  // assuming -1 is an invalid pin
+    i2c->addr = 0x00;                   // default address
+    i2c->speed = KX_I2C_SPEED_STANDARD; // default frequency 100kHz
+    i2c->mode = KX_I2C_MODE_MASTER;     // default mode
+
+    *handle = (void *)i2c;
 
     return KX_HAL_OK;
 }
-int8_t cli_i2c_deinit(cliI2CHandle_t handle)
+
+int8_t cli_i2c_deinit(void *handle)
 {
     if (handle)
     {
@@ -83,6 +86,7 @@ int8_t cli_i2c_deinit(cliI2CHandle_t handle)
     }
     return KX_HAL_ERR_FAIL; // invalid handle
 }
+
 void cli_i2c_help()
 {
     printf("\n\r--- I2C Interface Commands ---\n\r");
@@ -92,7 +96,8 @@ void cli_i2c_help()
     }
     printf("--------------------------------\n\r");
 }
-int8_t cli_i2c_cmd_dispatch(cliI2CHandle_t handle, const char *cmd)
+
+int8_t cli_i2c_cmd_dispatch(void *handle, const char *cmd)
 {
     if (handle == NULL)
     {
@@ -120,10 +125,11 @@ static int8_t is_digit(char ch)
 // this function will allocate a new I2C instance and return the handle to the caller
 // if no instance is specified, it will allocate the first available instance
 // the instance is mentioned as 0,1
-int8_t cli_i2c_alloc_instance(cliI2CHandle_t handle, char *args)
+int8_t cli_i2c_alloc_instance(void *handle, char *args)
 {
     CHECK_HANDLE_NULL(handle);
     // check if args has something, if yes, then use it as the instance number
+    cliI2CHandle_t i2c_handle = (cliI2CHandle_t)handle;
     int8_t instance = -1;
     if (args != NULL && strlen(args) > 0)
     {
@@ -140,7 +146,7 @@ int8_t cli_i2c_alloc_instance(cliI2CHandle_t handle, char *args)
         instance = atoi(args);
     }
     // call the hal function to allocate the instance
-    Kx_ErrorCode err = i2c_alloc_instance(&handle->hal_handle, instance);
+    Kx_ErrorCode err = i2c_alloc_instance(&i2c_handle->hal_handle, instance);
     if (err != KX_HAL_OK)
     {
         LOG_ERR("Failed to allocate I2C instance");
@@ -149,40 +155,51 @@ int8_t cli_i2c_alloc_instance(cliI2CHandle_t handle, char *args)
     return KX_HAL_OK;
 }
 
-int8_t cli_i2c_set_sda(cliI2CHandle_t handle, char *args)
+int8_t cli_i2c_set_sda(void *handle, char *args)
 {
     CHECK_HANDLE_NULL(handle);
-    handle->sda_pin = (Kx_IO)atoi(args);
+    cliI2CHandle_t i2c_handle = (cliI2CHandle_t)handle;
+
+    i2c_handle->sda_pin = (Kx_IO)atoi(args);
     // call the hal function to set the sda pin from hal
-    KxI2C_set_sda(handle->hal_handle, handle->sda_pin);
+    KxI2C_set_sda(i2c_handle->hal_handle, i2c_handle->sda_pin);
     return KX_HAL_OK;
 }
-int8_t cli_i2c_set_scl(cliI2CHandle_t handle, char *args)
+
+int8_t cli_i2c_set_scl(void *handle, char *args)
 {
     CHECK_HANDLE_NULL(handle);
-    handle->scl_pin = (Kx_IO)atoi(args);
+    cliI2CHandle_t i2c_handle = (cliI2CHandle_t)handle;
+
+    i2c_handle->scl_pin = (Kx_IO)atoi(args);
     // call the hal function to set the scl pin from hal
-    KxI2C_set_scl(handle->hal_handle, handle->scl_pin);
+    KxI2C_set_scl(i2c_handle->hal_handle, i2c_handle->scl_pin);
     return KX_HAL_OK;
 }
-int8_t cli_i2c_set_addr(cliI2CHandle_t handle, char *args)
+
+int8_t cli_i2c_set_addr(void *handle, char *args)
 {
     CHECK_HANDLE_NULL(handle);
-    handle->addr = (uint8_t)atoi(args);
+    cliI2CHandle_t i2c_handle = (cliI2CHandle_t)handle;
+
+    i2c_handle->addr = (uint8_t)atoi(args);
     // call the hal function to set the master address from hal
     return KX_HAL_OK;
 }
-int8_t cli_i2c_set_mode(cliI2CHandle_t handle, char *args)
+
+int8_t cli_i2c_set_mode(void *handle, char *args)
 {
     CHECK_HANDLE_NULL(handle);
+    cliI2CHandle_t i2c_handle = (cliI2CHandle_t)handle;
+
     // string compare to set the mode
     if (strcmp(args, "master") == 0)
     {
-        handle->mode = KX_I2C_MODE_MASTER;
+        i2c_handle->mode = KX_I2C_MODE_MASTER;
     }
     else if (strcmp(args, "slave") == 0)
     {
-        handle->mode = KX_I2C_MODE_SLAVE;
+        i2c_handle->mode = KX_I2C_MODE_SLAVE;
     }
     else
     {
@@ -190,43 +207,51 @@ int8_t cli_i2c_set_mode(cliI2CHandle_t handle, char *args)
         return KX_HAL_ERR_INVALID_ARG;
     }
     // call the hal function to set the mode from hal
-    KxI2C_set_device_mode(handle->hal_handle, handle->mode);
+    KxI2C_set_device_mode(i2c_handle->hal_handle, i2c_handle->mode);
     return KX_HAL_OK;
 }
-int8_t cli_i2c_set_speed(cliI2CHandle_t handle, char *args)
+
+int8_t cli_i2c_set_speed(void *handle, char *args)
 {
     CHECK_HANDLE_NULL(handle);
+    cliI2CHandle_t i2c_handle = (cliI2CHandle_t)handle;
+
     // string compare to set the speed
     if (strcmp(args, "standard") == 0)
     {
-        handle->speed = KX_I2C_SPEED_STANDARD;
+        i2c_handle->speed = KX_I2C_SPEED_STANDARD;
     }
-    // else if (strcmp(args, "fast") == 0)
-    // {
-    //     handle->speed = I2C_SPEED_FAST;
-    // }
-    // else if (strcmp(args, "fast_plus") == 0)
-    // {
-    //     handle->speed = I2C_SPEED_FAST_PLUS;
-    // }
-    // else if (strcmp(args, "high") == 0)
-    // {
-    //     handle->speed = I2C_SPEED_HIGH;
-    // }
+    else if (strcmp(args, "fast") == 0)
+    {
+        i2c_handle->speed = KX_I2C_SPEED_FAST;
+    }
+    else if (strcmp(args, "fast_plus") == 0)
+    {
+        i2c_handle->speed = KX_I2C_SPEED_FAST_PLUS;
+    }
+    else if (strcmp(args, "high") == 0)
+    {
+        i2c_handle->speed = KX_I2C_SPEED_HIGH;
+    }
     else
     {
         LOG_ERR("Invalid speed. Use 'standard', 'fast', 'fast_plus', or 'high'");
         return KX_HAL_ERR_INVALID_ARG;
     }
     // call the hal function to set the speed from hal
-    KxI2C_set_speed(handle->hal_handle, handle->speed);
+    KxI2C_set_speed(i2c_handle->hal_handle, i2c_handle->speed);
     return KX_HAL_OK;
 }
-int8_t cli_i2c_read(cliI2CHandle_t handle, char *args)
+
+int8_t cli_i2c_read(void *handle, char *args)
 {
     uint8_t slave_addr;
     uint8_t length;
     uint8_t *buff;
+
+    CHECK_HANDLE_NULL(handle);
+    cliI2CHandle_t i2c_handle = (cliI2CHandle_t)handle;
+
     char *token = strtok(args, " ");
     slave_addr = (uint8_t)strtol(token, NULL, 0);
     token = strtok(NULL, " ");
@@ -234,32 +259,37 @@ int8_t cli_i2c_read(cliI2CHandle_t handle, char *args)
     buff = (uint8_t *)malloc(length);
     printf("\n\rStarting read operation on slave address 0x%X for %d bytes", slave_addr, length);
 
-    KxI2C_master_read(handle->hal_handle, slave_addr, buff, length);
+    KxI2C_master_read(i2c_handle->hal_handle, slave_addr, buff, length);
 
     return KX_HAL_OK;
 }
-int8_t cli_i2c_write(cliI2CHandle_t handle, char *args)
+
+int8_t cli_i2c_write(void *handle, char *args)
 {
     uint8_t data[128];
     size_t length = 0;
     // parse the args to get the data to write
     // sample args: "0x01 0x02 0x03" use i write 0x01 0x02 0x03
+    CHECK_HANDLE_NULL(handle);
+    cliI2CHandle_t i2c_handle = (cliI2CHandle_t)handle;
     char *token = strtok(args, " ");
     while (token != NULL && length < sizeof(data))
     {
         data[length++] = (uint8_t)strtol(token, NULL, 0);
         token = strtok(NULL, " ");
     }
-    KxI2C_master_write(handle->hal_handle, data[0], &data[1], length - 1);
+    KxI2C_master_write(i2c_handle->hal_handle, data[0], &data[1], length - 1);
     return KX_HAL_OK;
 }
 
-int8_t cli_i2c_probe(cliI2CHandle_t handle, char *args)
+int8_t cli_i2c_probe(void *handle, char *args)
 {
     uint8_t slave_addr;
+    CHECK_HANDLE_NULL(handle);
+    cliI2CHandle_t i2c_handle = (cliI2CHandle_t)handle;
     slave_addr = (uint8_t)strtol(args, NULL, 0);
     LOG_INFO("Probing 0x%X", slave_addr);
-    Kx_ErrorCode err = KxI2C_probe(handle->hal_handle, slave_addr);
+    Kx_ErrorCode err = KxI2C_probe(i2c_handle->hal_handle, slave_addr);
     if (err == KX_HAL_ERR_TIMEOUT)
     {
         LOG_ERR("\n\rI2C Probe timeour");
@@ -275,12 +305,14 @@ int8_t cli_i2c_probe(cliI2CHandle_t handle, char *args)
     return KX_HAL_OK;
 }
 
-int8_t cli_i2c_scan(cliI2CHandle_t handle, char *args)
+int8_t cli_i2c_scan(void *handle, char *args)
 {
+    CHECK_HANDLE_NULL(handle);
+    cliI2CHandle_t i2c_handle = (cliI2CHandle_t)handle;
     printf("Scanning for I2C devices...\n");
     for (uint16_t addr = 0x00; addr <= 0x7E; addr++)
     {
-        Kx_ErrorCode err = KxI2C_probe(handle->hal_handle, addr);
+        Kx_ErrorCode err = KxI2C_probe(i2c_handle->hal_handle, addr);
         if (err == KX_HAL_ERR_TIMEOUT)
         {
             LOG_ERR("\n\rI2C Probe timeour");

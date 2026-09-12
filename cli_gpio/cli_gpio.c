@@ -4,17 +4,17 @@
 #include "cli_gpio.h"
 #include "interface_registry.h"
 
-typedef int8_t (*gpio_cmd_func_t)(gpioHandle_t, char *);
+// typedef int8_t (*gpio_cmd_func_t)(gpioHandle_t, char *);
 
 cmdEntry_t gpio_cmds[] = {
-    {"set_pin", (generic_fp_t)cli_gpio_set_pin,         "set_pin <IO_x>                        : Set active GPIO pin (e.g. set_pin IO_5)"},
-    {"get_config", (generic_fp_t)cli_gpio_get_config,   "get_config                            : Print current pin, dir, pull, level"},
-    {"set_dir", (generic_fp_t)cli_gpio_set_dir,         "set_dir <input|output>                : Set pin direction"},
-    {"set_pull", (generic_fp_t)cli_gpio_set_pull,       "set_pull <no_pull|pull_up|pull_down>  : Set pin pull mode"},
-    {"set", (generic_fp_t)cli_gpio_set,                 "set                                   : Drive active pin HIGH"},
-    {"clear", (generic_fp_t)cli_gpio_clear,             "clear                                 : Drive active pin LOW"},
-    {"read", (generic_fp_t)cli_gpio_read,               "read                                  : Read and print active pin level"},
-    {"toggle", (generic_fp_t)cli_gpio_toggle,           "toggle                                : Toggle active pin level"},
+    {"set_pin", cli_gpio_set_pin, "set_pin <IO_x>                        : Set active GPIO pin (e.g. set_pin IO_5)"},
+    {"get_config", cli_gpio_get_config, "get_config                            : Print current pin, dir, pull, level"},
+    {"set_dir", cli_gpio_set_dir, "set_dir <input|output>                : Set pin direction"},
+    {"set_pull", cli_gpio_set_pull, "set_pull <no_pull|pull_up|pull_down>  : Set pin pull mode"},
+    {"set", cli_gpio_set, "set                                   : Drive active pin HIGH"},
+    {"clear", cli_gpio_clear, "clear                                 : Drive active pin LOW"},
+    {"read", cli_gpio_read, "read                                  : Read and print active pin level"},
+    {"toggle", cli_gpio_toggle, "toggle                                : Toggle active pin level"},
     {"", NULL, ""} // sentinel
 };
 
@@ -24,10 +24,10 @@ int8_t cli_gpio_register()
     InterfaceRegistryEntry_t entry;
     entry.id = INTERFACE_GPIO;
     strcpy(entry.name, "gpio");
-    entry.init = (InterfaceHandlerInitCB_t)cli_gpio_init;
-    entry.de_init = (InterfaceHandlerDeInitCB_t)cli_gpio_deinit;
-    entry.cmd_handler = (InterfaceHandlerCmdCB_t)cli_gpio_cmd_dispatch;
-    entry.help_handler = (InterfaceHandlerHelpCB_t)cli_gpio_help;
+    entry.init = cli_gpio_init;
+    entry.de_init = cli_gpio_deinit;
+    entry.cmd_handler = cli_gpio_cmd_dispatch;
+    entry.help_handler = cli_gpio_help;
     int8_t reg_sts = interface_registry_register(&entry);
     if (reg_sts == 0)
     {
@@ -41,10 +41,11 @@ int8_t cli_gpio_register()
     }
 }
 
-int8_t cli_gpio_init(gpioHandle_t *handle)
+int8_t cli_gpio_init(void **handle)
 {
+    LOG_INFO("GPOI init");
     // For this simple implementation, we just allocate a struct to hold the config
-    gpioconfig_t *gpio = (gpioconfig_t *)malloc(sizeof(gpioconfig_t));
+    gpioHandle_t gpio = (gpioHandle_t )malloc(sizeof(gpioconfig_t));
     if (!gpio)
         return -1; // allocation failed
     memset(gpio, 0, sizeof(gpioconfig_t));
@@ -54,7 +55,7 @@ int8_t cli_gpio_init(gpioHandle_t *handle)
     return 0;
 }
 
-int8_t cli_gpio_deinit(gpioHandle_t handle)
+int8_t cli_gpio_deinit(void *handle)
 {
     if (handle)
     {
@@ -64,7 +65,7 @@ int8_t cli_gpio_deinit(gpioHandle_t handle)
     return -1; // invalid handle
 }
 
-int8_t cli_gpio_cmd_dispatch(gpioHandle_t handle, const char *cmd)
+int8_t cli_gpio_cmd_dispatch(void *handle, const char *cmd)
 {
     if (handle == NULL)
     {
@@ -79,7 +80,7 @@ int8_t cli_gpio_cmd_dispatch(gpioHandle_t handle, const char *cmd)
         LOG_ERR("\n\r Unknown GPIO command \"%s\" not found", key);
         return -1;
     }
-    ((gpio_cmd_func_t)gpio_cmds[cb_idx].func)(handle, args);
+    gpio_cmds[cb_idx].func(handle, args);
     return 0;
 }
 
@@ -107,7 +108,7 @@ static int8_t get_io_num(char *io)
     return -1;
 }
 
-int8_t cli_gpio_set_pin(gpioHandle_t handle, char *args)
+int8_t cli_gpio_set_pin(void *handle, char *args)
 {
     if (handle == NULL)
     {
@@ -137,7 +138,7 @@ static void print_config(gpioconfig_t *config)
            config->pin, config->dir, config->pull, config->level);
 }
 // this fuction is to get the set values for interface
-int8_t cli_gpio_get_config(gpioHandle_t handle)
+int8_t cli_gpio_get_config(void *handle, char *args)
 {
     // handle null check
     if (handle == NULL)
@@ -150,7 +151,7 @@ int8_t cli_gpio_get_config(gpioHandle_t handle)
     return 0;
 }
 
-int8_t cli_gpio_set_dir(gpioHandle_t handle, char *args)
+int8_t cli_gpio_set_dir(void *handle, char *args)
 {
     if (handle == NULL)
     {
@@ -175,7 +176,7 @@ int8_t cli_gpio_set_dir(gpioHandle_t handle, char *args)
     return 0;
 }
 
-int8_t cli_gpio_set_pull(gpioHandle_t handle, char *args)
+int8_t cli_gpio_set_pull(void *handle, char *args)
 {
     if (handle == NULL)
     {
@@ -204,7 +205,7 @@ int8_t cli_gpio_set_pull(gpioHandle_t handle, char *args)
     return 0;
 }
 
-int8_t cli_gpio_set(gpioHandle_t handle, char *args)
+int8_t cli_gpio_set(void *handle, char *args)
 {
     if (handle == NULL)
     {
@@ -228,7 +229,7 @@ int8_t cli_gpio_set(gpioHandle_t handle, char *args)
     return KX_HAL_OK;
 }
 
-int8_t cli_gpio_clear(gpioHandle_t handle, char *args)
+int8_t cli_gpio_clear(void *handle, char *args)
 {
     if (handle == NULL)
     {
@@ -252,7 +253,7 @@ int8_t cli_gpio_clear(gpioHandle_t handle, char *args)
     return KX_HAL_OK;
 }
 
-int8_t cli_gpio_read(gpioHandle_t handle, char *args)
+int8_t cli_gpio_read(void *handle, char *args)
 {
     if (handle == NULL)
     {
@@ -286,7 +287,7 @@ int8_t cli_gpio_read(gpioHandle_t handle, char *args)
     return KX_HAL_OK;
 }
 
-int8_t cli_gpio_toggle(gpioHandle_t handle, char *args)
+int8_t cli_gpio_toggle(void *handle, char *args)
 {
     if (handle == NULL)
     {

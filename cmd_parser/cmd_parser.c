@@ -10,7 +10,7 @@ int8_t cmd_dispatch(const char *cmd, cmdEntry_t *cmd_table, int table_size)
     int8_t cb_idx = cmd_tbl_search(key, cmd_table, table_size);
     if (cb_idx != -1)
     {
-        ((int8_t (*)(const char *))cmd_table[cb_idx].func)(args);
+        cmd_table[cb_idx].func(NULL,args);
         return 0;
     }
     return -1;

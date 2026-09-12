@@ -9,37 +9,33 @@
 #include "kx_hal_types.h"
 #include "kx_gpio_hal.h"
 
-
-
-//define a struct to have a configs needed to operate a single gpio
+// define a struct to have a configs needed to operate a single gpio
 
 typedef struct
 {
-    Kx_GpioPin pin;        // GPIO pin number
-    Kx_GpioDirection_t dir;       // GPIO mode (input, output, etc.) 0=>output 1=>input
-    Kx_GpioPull_t pull;       // Pull-up/pull-down configuration 0=> no_pull 1=>pull_up 2=>pull_down
-    Kx_GpioState_t level;      // Output level (0 or 1)
+    Kx_GpioPin pin;         // GPIO pin number
+    Kx_GpioDirection_t dir; // GPIO mode (input, output, etc.) 0=>output 1=>input
+    Kx_GpioPull_t pull;     // Pull-up/pull-down configuration 0=> no_pull 1=>pull_up 2=>pull_down
+    Kx_GpioState_t level;   // Output level (0 or 1)
 } gpioconfig_t;
 
-typedef gpioconfig_t* gpioHandle_t;
-//define gpio specific commands function pairs
+typedef gpioconfig_t *gpioHandle_t;
+// define gpio specific commands function pairs
 
 int8_t cli_gpio_register();
 
-int8_t cli_gpio_init(gpioHandle_t *handle);
-int8_t cli_gpio_deinit(gpioHandle_t  handle);
+int8_t cli_gpio_init(void **handle);
+int8_t cli_gpio_deinit(void *handle);
 void cli_gpio_help(void);
-int8_t cli_gpio_cmd_dispatch(gpioHandle_t  handle,const char *cmd);
+int8_t cli_gpio_cmd_dispatch(void *handle, const char *cmd);
 
-
-int8_t cli_gpio_set_pin(gpioHandle_t  handle, char * );
-int8_t cli_gpio_get_config(gpioHandle_t  handle);
-int8_t cli_gpio_set_dir(gpioHandle_t  handle, char *args);
-int8_t cli_gpio_set_pull(gpioHandle_t  handle, char *args);
-int8_t cli_gpio_clear(gpioHandle_t handle, char *args);
-int8_t cli_gpio_set(gpioHandle_t handle, char *args);
-int8_t cli_gpio_toggle(gpioHandle_t handle, char *args);
-int8_t cli_gpio_read(gpioHandle_t handle, char *args);
-
+int8_t cli_gpio_set_pin(void *handle, char *args);
+int8_t cli_gpio_get_config(void *handle, char *args);
+int8_t cli_gpio_set_dir(void *handle, char *args);
+int8_t cli_gpio_set_pull(void *handle, char *args);
+int8_t cli_gpio_clear(void *handle, char *args);
+int8_t cli_gpio_set(void *handle, char *args);
+int8_t cli_gpio_toggle(void *handle, char *args);
+int8_t cli_gpio_read(void *handle, char *args);
 
 #endif // CLI_GPIO_H

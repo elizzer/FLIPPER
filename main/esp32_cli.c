@@ -165,12 +165,12 @@ int readline(char *buf, size_t max_len)
 
 // crate a basic set of cmd function pairs
 // greeting banner
-void cmd_hello(char *args)
+void cmd_hello(void* handle,char *args)
 {
     printf("Hello, %s!\r\n", args);
 }
 
-void cmd_print_banner(char *args)
+void cmd_print_banner(void* handle,char *args)
 {
     (void)args;
     printf("\r\n");
@@ -186,7 +186,7 @@ void cmd_print_banner(char *args)
     printf("\r\n");
 }
 
-void cmd_time(char *args)
+void cmd_time(void* handle,char *args)
 {
     int64_t us = esp_timer_get_time();
     int64_t seconds = us / 1000000;
@@ -194,7 +194,7 @@ void cmd_time(char *args)
     printf("Uptime: %lld.%06lld seconds\r\n", (long long)seconds, (long long)micros);
 }
 
-void cmd_sysinfo(char *args)
+void cmd_sysinfo(void* handle,char *args)
 {
     esp_chip_info_t chip_info;
     esp_chip_info(&chip_info);
@@ -207,7 +207,7 @@ void cmd_sysinfo(char *args)
     printf("Minimum free heap: %" PRIu32 " bytes\r\n", esp_get_minimum_free_heap_size());
 }
 
-void cmd_temp(char *args)
+void cmd_temp(void* handle,char *args)
 {
     (void)args;
 
@@ -243,27 +243,27 @@ void cmd_temp(char *args)
     temperature_sensor_disable(temp_handle);
     temperature_sensor_uninstall(temp_handle);
 }
-void cmd_panic(char *args)
+void cmd_panic(void* handle,char *args)
 {
     (void)args;
     printf("Breaking me on purpose...\r\n");
     abort();
 }
 
-void cmd_all(char *args)
+void cmd_all(void* handle,char *args)
 {
     (void)args;
-    cmd_time("");
-    cmd_sysinfo("");
+    cmd_time("",NULL);
+    cmd_sysinfo("",NULL);
 }
 
-void cmd_reboot(char *args)
+void cmd_reboot(void* handle,char *args)
 {
     (void)args;
     esp_restart();
 }
 
-void cmd_console_clear(char *args)
+void cmd_console_clear(void* handle,char *args)
 {
     // \033[2J clears the entire screen, \033[H moves cursor to home (0,0)
     printf("\033[2J\033[H");
@@ -271,19 +271,19 @@ void cmd_console_clear(char *args)
 }
 
 cmdEntry_t g_cmd_table[] = {
-    {"hello", (generic_fp_t)cmd_hello, ""},
-    {"print_banner", (generic_fp_t)cmd_print_banner, ""},
-    {"time", (generic_fp_t)cmd_time, ""},
-    {"sysinfo", (generic_fp_t)cmd_sysinfo, ""},
-    {"temp", (generic_fp_t)cmd_temp, ""},
-    {"panic", (generic_fp_t)cmd_panic, ""},
-    {"all", (generic_fp_t)cmd_all, ""},
-    {"help", (generic_fp_t)cmd_help, ""},
-    {"create", (generic_fp_t)cmd_create, ""},
-    {"use", (generic_fp_t)cmd_use, ""},
-    {"reboot", (generic_fp_t)cmd_reboot, ""},
-    {"cls", (generic_fp_t)cmd_console_clear, ""},
-    {"clear", (generic_fp_t)cmd_console_clear, ""},
+    {"hello", cmd_hello, ""},
+    {"print_banner", cmd_print_banner, ""},
+    {"time", cmd_time, ""},
+    {"sysinfo", cmd_sysinfo, ""},
+    {"temp", cmd_temp, ""},
+    {"panic", cmd_panic, ""},
+    {"all", cmd_all, ""},
+    {"help", cmd_help, ""},
+    {"create", cmd_create, ""},
+    {"use", cmd_use, ""},
+    {"reboot", cmd_reboot, ""},
+    {"cls", cmd_console_clear, ""},
+    {"clear", cmd_console_clear, ""},
     {"", NULL, ""},
 };
 
@@ -293,7 +293,7 @@ void app_main(void)
     uart_driver_install(UART_NUM_0, 256, 0, 0, NULL, 0);
 
     LOG_INFO("ESP32 CLI started");
-    cmd_print_banner(NULL);
+    cmd_print_banner(NULL,NULL);
     char input[128] = {0};
     app_init(); // initialize app commands and state
     int8_t status;

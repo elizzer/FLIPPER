@@ -19,7 +19,7 @@ void app_init(void)
     return;
 }
 
-void cmd_help(char *args)
+void cmd_help(void * handle,char *args)
 {
 
     if (strlen(args) != 0)
@@ -78,7 +78,7 @@ static int8_t get_free_handle_index()
 // create <interface> <name>
 // call the init function for the specified interface and store the handle in a global variable for that mode
 
-void cmd_create(char *args)
+void cmd_create(void * handle,char *args)
 {
     char interface[32];
     char name[32];
@@ -126,7 +126,7 @@ void cmd_create(char *args)
     LOG_INFO("interface '%s' created with name '%s'", interface, name);
 }
 
-void cmd_use(char *args)
+void cmd_use(void * handle,char *args)
 {
     // the args have the name, find the handle, call the interface_cmd_dispatch function for the current mode with the handle and the rest of the args
     char name[32];

@@ -15,9 +15,9 @@ typedef struct
     InterfaceId_e inf;
 } interface_instance_t;
 
-void cmd_help(char *args);
-void cmd_create(char *args);
-void cmd_use(char *args);
+void cmd_help(void *,char *args);
+void cmd_create(void *,char *args);
+void cmd_use(void *,char *args);
 
 //init function to register all commands and set default mode
 void app_init(void);
