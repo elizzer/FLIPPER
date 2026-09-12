@@ -15,9 +15,21 @@ typedef struct
     InterfaceId_e inf;
 } interface_instance_t;
 
+extern cmdEntry_t g_cmd_table[];
+
+void main_cmd_dispatch(const char * cmd);
+
 void cmd_help(void *,char *args);
 void cmd_create(void *,char *args);
 void cmd_use(void *,char *args);
+void cmd_print_banner(void *handle, char *args);
+void cmd_time(void *handle, char *args);
+void cmd_sysinfo(void *handle, char *args);
+void cmd_panic(void *handle, char *args);
+void cmd_panic(void *handle, char *args);
+void cmd_all(void *handle, char *args);
+void cmd_reboot(void *handle, char *args);
+void cmd_console_clear(void *handle, char *args);
 
 //init function to register all commands and set default mode
 void app_init(void);

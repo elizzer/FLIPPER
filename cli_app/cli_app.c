@@ -6,10 +6,29 @@
 #include "cli_pwm.h"
 #include "cli_i2c.h"
 
+#include "esp_system.h"
+#include "esp_err.h"
+#include "esp_chip_info.h"
+#include "esp_timer.h"
 
 // global variable to store current mode
 
 interface_instance_t interfaces[10]; // global array to hold interface handles
+
+cmdEntry_t g_cmd_table[] = {
+    {"print_banner", cmd_print_banner, "print_banner", "Show the startup banner"},
+    {"time", cmd_time, "time", "Show uptime since boot"},
+    {"sysinfo", cmd_sysinfo, "sysinfo", "Show chip and heap information"},
+    {"panic", cmd_panic, "panic", "Break me on purpose and trigger fault handling"},
+    {"all", cmd_all, "all", "Show uptime and system info"},
+    {"help", cmd_help, "help [interface]", "Show help message"},
+    {"create", cmd_create, "create <interface> <name>", "Create a named interface instance"},
+    {"use", cmd_use, "use <name> <cmd> [args]", "Run a command on a created interface"},
+    {"reboot", cmd_reboot, "reboot", "Restart the device"},
+    {"cls", cmd_console_clear, "cls", "Clear the console"},
+    {"clear", cmd_console_clear, "clear", "Clear the console"},
+    {"", NULL, "", ""},
+};
 
 void app_init(void)
 {
@@ -17,38 +36,6 @@ void app_init(void)
     cli_pwm_register();
     cli_i2c_register();
     return;
-}
-
-void cmd_help(void * handle,char *args)
-{
-
-    if (strlen(args) != 0)
-    {
-        InterfaceRegistryEntry_t *inf = interface_registry_lookup_name(args);
-        if (inf != NULL)
-        {
-            inf->help_handler();
-        }
-    }
-    else
-    {
-        printf("\r\n--- Karuvi X CLI Commands ---\r\n");
-        printf("  hello <name>                 - Print a greeting\r\n");
-        printf("  print_banner                 - Show the startup banner\r\n");
-        printf("  time                         - Show uptime since boot\r\n");
-        printf("  sysinfo                      - Show chip and heap information\r\n");
-        printf("  temp                         - Show chip temperature\r\n");
-        printf("  panic                        - Break me on purpose and trigger fault handling\r\n");
-        printf("  all                          - Show uptime and system info\r\n");
-        printf("  create <interface> <name>    - Create a named interface instance\r\n");
-        printf("                                  e.g. create gpio io1\r\n");
-        printf("  use <name> <cmd> [args]      - Run a command on a created interface\r\n");
-        printf("                                  e.g. use io1 set_pin IO_5\r\n");
-        printf("  help                         - Show this help message\r\n");
-        printf("  help <interface>             - Show help message of the interface\r\n");
-        printf("  reboot                       - Restart the device\r\n");
-        printf("-----------------------------\r\n");
-    }
 }
 
 static int8_t get_interface_handle(char *name)
@@ -78,7 +65,7 @@ static int8_t get_free_handle_index()
 // create <interface> <name>
 // call the init function for the specified interface and store the handle in a global variable for that mode
 
-void cmd_create(void * handle,char *args)
+void cmd_create(void *handle, char *args)
 {
     char interface[32];
     char name[32];
@@ -126,7 +113,7 @@ void cmd_create(void * handle,char *args)
     LOG_INFO("interface '%s' created with name '%s'", interface, name);
 }
 
-void cmd_use(void * handle,char *args)
+void cmd_use(void *handle, char *args)
 {
     // the args have the name, find the handle, call the interface_cmd_dispatch function for the current mode with the handle and the rest of the args
     char name[32];
@@ -148,4 +135,103 @@ void cmd_use(void * handle,char *args)
     }
 
     inf_entry->cmd_handler(interfaces[indx].inf_handle, cmdArgs);
+}
+
+void cmd_print_banner(void *handle, char *args)
+{
+    (void)args;
+    printf("\r\n");
+    printf("  ██╗  ██╗ █████╗ ██████╗ ██╗   ██╗██╗   ██╗██╗    ██╗  ██╗\r\n");
+    printf("  ██║ ██╔╝██╔══██╗██╔══██╗██║   ██║██║   ██║██║    ╚██╗██╔╝\r\n");
+    printf("  █████╔╝ ███████║██████╔╝██║   ██║██║   ██║██║     ╚███╔╝ \r\n");
+    printf("  ██╔═██╗ ██╔══██║██╔══██╗██║   ██║╚██╗ ██╔╝██║     ██╔██╗ \r\n");
+    printf("  ██║  ██╗██║  ██║██║  ██║╚██████╔╝ ╚████╔╝ ██║    ██╔╝ ██╗\r\n");
+    printf("  ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝   ╚═══╝  ╚═╝    ╚═╝  ╚═╝\r\n");
+    printf("\r\n");
+    printf("  Open Source Engineer's Toolkit  |  ESP32-S3\r\n");
+    printf("  v0.1.0  |  https://github.com/elizzer/Karuvi_X.git\r\n");
+    printf("\r\n");
+}
+
+void cmd_time(void *handle, char *args)
+{
+    int64_t us = esp_timer_get_time();
+    int64_t seconds = us / 1000000;
+    int64_t micros = us % 1000000;
+    printf("Uptime: %lld.%06lld seconds\r\n", (long long)seconds, (long long)micros);
+}
+
+void cmd_sysinfo(void *handle, char *args)
+{
+    esp_chip_info_t chip_info;
+    esp_chip_info(&chip_info);
+
+    printf("Chip model: %s\r\n", chip_info.model == CHIP_ESP32S3 ? "ESP32-S3" : "Unknown");
+    printf("Cores: %d\r\n", chip_info.cores);
+    printf("Revision: %d\r\n", chip_info.revision);
+    printf("Features bitmap: 0x%08" PRIx32 "\r\n", chip_info.features);
+    printf("Free heap: %" PRIu32 " bytes\r\n", esp_get_free_heap_size());
+    printf("Minimum free heap: %" PRIu32 " bytes\r\n", esp_get_minimum_free_heap_size());
+}
+
+void cmd_panic(void *handle, char *args)
+{
+    (void)args;
+    printf("Breaking me on purpose...\r\n");
+    abort();
+}
+
+void cmd_all(void *handle, char *args)
+{
+    (void)args;
+    cmd_time("", NULL);
+    cmd_sysinfo("", NULL);
+}
+
+void cmd_reboot(void *handle, char *args)
+{
+    (void)args;
+    esp_restart();
+}
+
+void cmd_console_clear(void *handle, char *args)
+{
+    // \033[2J clears the entire screen, \033[H moves cursor to home (0,0)
+    printf("\033[2J\033[H");
+}
+
+void cmd_help(void *handle, char *args);
+
+void cmd_help(void *handle, char *args)
+{
+
+    printf("\r\n--- Karuvi X CLI Commands ---\r\n");
+    if (strlen(args) != 0)
+    {
+        InterfaceRegistryEntry_t *inf = interface_registry_lookup_name(args);
+        if (inf != NULL)
+        {
+            inf->help_handler();
+        }
+    }
+    else
+    {
+        for (int i = 0; g_cmd_table[i].func != NULL; i++)
+        {
+            printf("  %-28s - %s\r\n",
+                   g_cmd_table[i].key,
+                   g_cmd_table[i].help_str);
+        }
+    }
+
+    printf("-----------------------------\r\n");
+}
+
+void main_cmd_dispatch(const char * cmd)
+{
+    uint8_t status = cmd_dispatch(cmd, g_cmd_table, sizeof(g_cmd_table) / sizeof(cmdEntry_t));
+    if (status == -1)
+    {
+        LOG_ERR("Unknown command :%s", cmd);
+    }
 }
