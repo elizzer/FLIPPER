@@ -21,10 +21,11 @@ void cli_pwm_help();
 int8_t cli_pwm_cmd_dispatch(cliPWMHandle_t handle, const char * cmd);
 
 int8_t cli_pwm_set_pin(cliPWMHandle_t,char *args);
-int8_t cli_pwm_set_freq(cliPWMHandle_t,char *args);
+int8_t cli_pwm_set_freq_hz(cliPWMHandle_t,char *args);
+int8_t cli_pwm_set_freq_Mhz(cliPWMHandle_t handle, char *args);
 int8_t cli_pwm_get_freq(cliPWMHandle_t,char *args);
 int8_t cli_pwm_set_duty_cycle(cliPWMHandle_t,char *args);
-int8_t cli_pwm_get_duty_cycle(cliPWMHandle_t,char *args);
+int8_t cli_pwm_get_duty_cycle(cliPWMHandle_t,char *args); 
 int8_t cli_pwm_start(cliPWMHandle_t,char *args);
 int8_t cli_pwm_stop(cliPWMHandle_t,char *args);
 int8_t cli_pwm_reset(cliPWMHandle_t,char *args);
