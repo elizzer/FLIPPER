@@ -8,6 +8,8 @@ set(EXTRA_COMPONENT_DIRS
     ${CMAKE_SOURCE_DIR}/cmd_parser
     ${CMAKE_SOURCE_DIR}/cli_app
     ${CMAKE_SOURCE_DIR}/cli_gpio
+    ${CMAKE_SOURCE_DIR}/cli_pwm
+    ${CMAKE_SOURCE_DIR}/cli_i2c
     ${CMAKE_SOURCE_DIR}/interface_registry
     ${CMAKE_SOURCE_DIR}/kx_hal
 
